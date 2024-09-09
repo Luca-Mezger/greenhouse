@@ -20,3 +20,7 @@ After that we looked at the humidity sensor, which we calibrated by seeing how m
 Subsequently we began with the work with the relay, which we needed because the Arduino itself can't provide sufficient voltage. Here we firstly tried to understand it by using it not connected to anything and after connected to the water pump. Then we saw that the tube of the water pump was too long and cut a bit off. What we wanted to see was how much water would come out after a certain time and we decided that two seconds was the best time for watering the mint plant.
 
 It was decided that we use GitHub so that we can work on the same file somewhat at the same time.
+
+Then we realized the stabilising code we were using was not very good, so we decided to recode it. 
+
+While that was happening we also looked at how the lights would work.
