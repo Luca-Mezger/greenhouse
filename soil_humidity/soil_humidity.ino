@@ -6,6 +6,8 @@
 #define STABILIZATION_THRESHOLD 0.5  // trheshold for detecting stabilization
 #define DELAY_TIME 10
 
+// hello
+
 float previousAverageSoilHumidity = 0; 
 
 float clip(float n, float lower, float upper) {

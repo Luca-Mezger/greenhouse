@@ -3,9 +3,9 @@
 #define RELATIVE_SOIL_HUMIDITY_LOWER_LIMIT 363
 #define RELATIVE_SOIL_HUMIDITY_A -0.29761 //a and b for linear regression to map Resistance of Soil Moisture reader to percentage
 #define RELATIVE_SOIL_HUMIDITY_B 208.0357
-#define STABILIZATION_THRESHOLD 0.5  // trheshold for detecting stabilization
+#define STABILIZATION_THRESHOLD 0.5  // threshold for detecting stabilization
 #define DELAY_TIME 10
-
+#define PUMP D11
 #define SOIL_MOISTURE_THRESHOLD 35
 
 float previousAverageSoilHumidity = 0; 
@@ -40,13 +40,16 @@ bool is_stabilizing(float currentHumidity, float previousHumidity, float thresho
 
 void setup() {
   Serial.begin(9600);
+
 }
 
 
 // Function to call when soil moisture is below the threshold
 void onLowSoilMoisture() {
   Serial.println("Soil moisture is below threshold! pumping...");
-  //pump stuff
+  digitalWrite(PUMP, LOW);
+  delay(2000);
+  digitalWrite(PUMP, HIGH);
 }
 
 void loop() {
@@ -57,7 +60,7 @@ void loop() {
 
   // Check if moisture is below threshold
   if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
-    onLowSoilMoisture(); 
+    onLowSoilMoisture();
   }
 
   // Check if moisture is stabilizing
