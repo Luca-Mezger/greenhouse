@@ -9,6 +9,7 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 
 
 ## Work journal
+09.09
 We first got used to the Arduino Nano 33 
 
 Then we decided what we needed for a automated greenhouse.
