@@ -45,6 +45,14 @@ A relay is like a remote control switch that lets a small electrical signal turn
 With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We use it to power the LED strips, as they need 12 V to function.
 
 #### Humidity Logic
+
+- Check moisture level
+- If moisture level below threshold, pump water
+- Check again once level is stable
+
+
+ 
+
 ```c++
   float averageSoilHumidity = get_average_soil_humidity();
 
@@ -75,7 +83,6 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
   }
   endTime = 0;
 ```
-We check the moisture level every hour, and if the level
 
 #### LED Logic
 - Initializes color sensor and RTC.
