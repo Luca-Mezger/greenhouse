@@ -2,10 +2,16 @@
 
 The goal for this project week was to make a fully functioning automated greenhouse, where all funtions that would need manual work, would be able to be done by the greenhouse.
 
-## Arduino
-
-We used Arduino a hardware and software platform. Arduino has these mini computers. Where not a lot of space is needed and it is possible to code what they do.
-
+## Hardware
+- 1x Arduino Nano 33 Sense BLE
+- 1x Capacitive Soil Moisture Sensor v1.2
+- 1x Voltage Converter (5V-->12V)
+- 1x LED Strip
+- 3x Relay
+- 1x RTC
+- 1x Pump
+- 1x Fan
+- 1x 5V PSU
 
 ## Todo
 - [x] Light detection
@@ -24,7 +30,6 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 
 
 ## Work journal
-### 09 September 2024
 
 #### Decided on materials needed:
   - Arduino Nano 33 Sense BLE (contains various sensors)
