@@ -1,5 +1,7 @@
 # Automatic Greenhouse
-
+Schweizer Jugend Forscht - Coding Camp   
+Advised by Alberto Ferrante   
+   
 The goal for this project week was to make a fully functioning automated greenhouse, where all funtions that would need manual work, would be able to be done by the greenhouse.
 
 ## Hardware
