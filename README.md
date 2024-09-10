@@ -9,7 +9,7 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 
 ## Todo
 - [ ] Detection Water Supply (empty or not)
-- [ ] Temperature Sensor/Fan
+- [x] Temperature Sensor/Fan
 - [ ] Multithreading
 - [ ] Build Greenhouse
 - [ ] Display
@@ -133,5 +133,20 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
 ```
 
 #### Temperature Logic
+
+- Check temperature every half hour
+- If it exceeds the threshold turn the fan on
+- Fan can only turn off if the temperature is below the threshold minus a buffer, so that the fan isn't constantly turning on and off
+
+```c++
+  float temperature = HTS.readTemperature()
+
+  if (temperature > TEMPERATURE_THRESHOLD) {
+    digitalWrite(FAN_PIN, LOW);
+  } else if (temperature < TEMPERATURE_THRESHOLD - BUFFER) {
+    digitalWrite(FAN_PIN, HIGH);
+  }
+  delay(1800000);
+```
 
 #### Display Logic
