@@ -7,20 +7,124 @@ The goal for this project week was to make a fully functioning automated greenho
 We used Arduino a hardware and software platform. Arduino has these mini computers. Where not a lot of space is needed and it is possible to code what they do.
 
 
+## Todo
+- [ ] Detection Water Supply (empty or not)
+- [ ] Temperature Sensor/Fan
+- [ ] Multithreading
+- [ ] Build Greenhouse
+- [ ] Display
+- [ ] Smartphone Connection
+- [ ] Poster
+- [ ] Report
+
+
 
 ## Work journal
-09.09
+### 09 September 2024
 
-We first got used to the Arduino Nano 33 
+#### Decided on materials needed:
+  - Arduino Nano 33 Sense BLE (contains various sensors)
+  - Soil Moisture Sensor - to detect water level in soil
+  - LED light strips - to supply plant with needed light
+  - Water pump - to supply plant with water
+  - Voltage Regulator - water pump needs more voltage than what the Nano can supply
+  - Relais - works like a light switch
 
-Then we decided what we needed for a automated greenhouse.
+#### Calibrate humidity sensor
+1. Figure out the output value in completely dry environment (here: $363$)
+2. Figure out the output value while submerged in water (here: $699$)
 
-After that we looked at the humidity sensor, which we calibrated by seeing how much was returned with it's value in a glas of water, and the value when it was in the open. Then using those information we calibrated the sensor.
+These values correspond to 0% humidity and 100% humidity:
+   Create a linear function that maps these values:
+   $f(x) = mx + b = -0.29761x + 208.0357$
 
-Subsequently we began with the work with the relay, which we needed because the Arduino itself can't provide sufficient voltage. Here we firstly tried to understand it by using it not connected to anything and after connected to the water pump. Then we saw that the tube of the water pump was too long and cut a bit off. What we wanted to see was how much water would come out after a certain time and we decided that two seconds was the best time for watering the mint plant.
+#### Relay
+A relay is like a remote control switch that lets a small electrical signal turn a bigger device on or off. It allows you to control things like motors or lights using just a small amount of power, keeping the control system safe and separate from the high power used by the device. We use it to power our water pump and the LED strips.
 
-It was decided that we use GitHub so that we can work on the same file somewhat at the same time.
+#### Voltage Regulator
+With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We use it to power the LED strips, as they need 12 V to function.
 
-Then we realized the stabilising code we were using was not very good, so we decided to recode it. 
+#### Humidity Logic
+```c++
+  float averageSoilHumidity = get_average_soil_humidity();
 
-While that was happening we also looked at how the lights would work.
+  // Check if moisture is below threshold
+  if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
+    int currentTime = millis();
+
+    while (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
+
+      onLowSoilMoisture();
+
+      do {
+        for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
+          averageSoilHumidity = get_average_soil_humidity();
+          addElement(differenceAverageSoilHumidity, averageSoilHumidity);
+          delay(DELAY_TIME_STABILIZING_ARRAY);
+        }
+      } while (!is_stabilizing(differenceAverageSoilHumidity));
+    }
+
+    endTime = millis() - currentTime;
+  }
+
+  if (HOUR > endTime) {
+    delay(HOUR - endTime);
+  } else {
+    delay(0);
+  }
+  endTime = 0;
+```
+We check the moisture level every hour, and if the level
+
+#### LED Logic
+- Initializes color sensor and RTC.
+- Calculates hourly average of  brightness, updates 24-hour history.
+- Tracks hours with brightness above threshold.
+- If light hours < required and remaining daylight insufficient, turns on LED.
+  
+```c++
+    if (Colour.pop(colourData)) {
+        float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+        hourlyBrightnessAccumulator += brightness;
+        brightnessReadingsCount++;
+
+        if (brightnessReadingsCount >= (HOUR_DURATION / 1000)) {  // Assuming one reading per second
+            float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
+
+            for (int i = 1; i < 24; i++) {
+                brightnessHistory[i - 1] = brightnessHistory[i];
+            }
+            brightnessHistory[23] = averageBrightnessForHour;
+
+            hourlyBrightnessAccumulator = 0;
+            brightnessReadingsCount = 0;
+
+            hoursWithLight = 0;
+            for (int i = 0; i < 24; i++) {
+                if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+                    hoursWithLight++;
+                }
+            }
+
+            int remainingHours = 24 - rtc.hour;
+
+            if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+                int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+                if (remainingHours <= requiredLightHours) {
+                    digitalWrite(LED_PIN, LOW);  // Turn on light
+                } else {
+                    digitalWrite(LED_PIN, HIGH);  // Turn off light
+                }
+            } else {
+                digitalWrite(LED_PIN, HIGH);  // Turn off light if enough light
+            }
+        }
+
+        delay(1000);  // Delay for 1 second for each sensor reading
+    }
+```
+
+#### Temperature Logic
+
+#### Display Logic

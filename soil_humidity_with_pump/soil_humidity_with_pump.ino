@@ -127,7 +127,11 @@ void loop() {
     endTime = millis() - currentTime;
   }
 
-  delay(HOUR - endTime);
+  if (HOUR > endTime) {
+    delay(HOUR - endTime);
+  } else {
+    delay(0);
+  }
   endTime = 0;
 
   // Update previous average
