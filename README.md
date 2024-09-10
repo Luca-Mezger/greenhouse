@@ -82,7 +82,8 @@ We check the moisture level every hour, and if the level
 - Calculates hourly average of  brightness, updates 24-hour history.
 - Tracks hours with brightness above threshold.
 - If light hours < required and remaining daylight insufficient, turns on LED.
-'''c++
+  
+```c++
     if (Colour.pop(colourData)) {
         float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
         hourlyBrightnessAccumulator += brightness;
@@ -122,7 +123,7 @@ We check the moisture level every hour, and if the level
 
         delay(1000);  // Delay for 1 second for each sensor reading
     }
-'''
+```
 
 #### Temperature Logic
 
