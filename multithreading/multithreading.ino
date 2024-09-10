@@ -36,7 +36,7 @@ using namespace std::literals::chrono_literals;
 
 Thread pump_thread;
 Thread light_sensor_thread;  // New thread for light sensor functionality
-Thread temperature_thread;¨
+Thread temperature_thread;
 
 // Variables for water pump/humidity
 float previousAverageSoilHumidity = 0;
@@ -114,7 +114,7 @@ void onLowSoilMoisture() {
 }
 
 void onNoWaterEffect() {
-    Serial.println("watertank empty");
+    // Serial.println("watertank empty");
 }
 
 void pump_loop() {
@@ -214,7 +214,7 @@ void light_sensor_loop() {
                     // Only turn on the LED if external light is below 50%
                     if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
                         digitalWrite(LED_PIN, LOW);  // Turn on the LED 
-                        //Serial.println("Light on!!!");
+                        // Serial.println("Light on!!!");
                     } else {
                         digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
                     }
@@ -235,7 +235,7 @@ void light_sensor_loop() {
 void temperature_loop() {
   while (1) {
     float temperature = HTS.readTemperature();
-    Serial.println(temperature);
+    // Serial.println(temperature);
 
     if (temperature > TEMPERATURE_THRESHOLD) {
       digitalWrite(FAN_PIN, LOW);  // Turn fan on
@@ -248,7 +248,7 @@ void temperature_loop() {
 }
 
 void setup() {
-  Serial.begin(9600);
+  // Serial.begin(9600);
   
   // Initialize fan pin
   pinMode(FAN_PIN, OUTPUT);
@@ -256,7 +256,7 @@ void setup() {
   
   // Initialize temperature sensor
   if (!HTS.begin()) {
-    Serial.println("Failed to initialize humidity temperature sensor!");
+    // Serial.println("Failed to initialize humidity temperature sensor!");
     while (1);
   }
 
