@@ -78,6 +78,51 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
 We check the moisture level every hour, and if the level
 
 #### LED Logic
+- Initializes color sensor and RTC.
+- Calculates hourly average of  brightness, updates 24-hour history.
+- Tracks hours with brightness above threshold.
+- If light hours < required and remaining daylight insufficient, turns on LED.
+'''c++
+    if (Colour.pop(colourData)) {
+        float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+        hourlyBrightnessAccumulator += brightness;
+        brightnessReadingsCount++;
+
+        if (brightnessReadingsCount >= (HOUR_DURATION / 1000)) {  // Assuming one reading per second
+            float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
+
+            for (int i = 1; i < 24; i++) {
+                brightnessHistory[i - 1] = brightnessHistory[i];
+            }
+            brightnessHistory[23] = averageBrightnessForHour;
+
+            hourlyBrightnessAccumulator = 0;
+            brightnessReadingsCount = 0;
+
+            hoursWithLight = 0;
+            for (int i = 0; i < 24; i++) {
+                if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+                    hoursWithLight++;
+                }
+            }
+
+            int remainingHours = 24 - rtc.hour;
+
+            if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+                int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+                if (remainingHours <= requiredLightHours) {
+                    digitalWrite(LED_PIN, LOW);  // Turn on light
+                } else {
+                    digitalWrite(LED_PIN, HIGH);  // Turn off light
+                }
+            } else {
+                digitalWrite(LED_PIN, HIGH);  // Turn off light if enough light
+            }
+        }
+
+        delay(1000);  // Delay for 1 second for each sensor reading
+    }
+'''
 
 #### Temperature Logic
 
