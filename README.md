@@ -94,6 +94,7 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
   }
   endTime = 0;
 ```
+---
 
 #### LED Logic
 - Initializes color sensor and RTC.
@@ -142,6 +143,7 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
         delay(1000);  // Delay for 1 second for each sensor reading
     }
 ```
+---
 
 #### Temperature Logic
 
@@ -159,5 +161,6 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
   }
   delay(1800000);
 ```
+---
 
 #### Display Logic
