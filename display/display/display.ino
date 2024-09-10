@@ -136,13 +136,13 @@ void pump_loop() {
           for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
             averageSoilHumidity = get_average_soil_humidity();
             addElement(differenceAverageSoilHumidity, averageSoilHumidity);
-            ThisThread::sleep_for(DELAY_TIME_STABILIZING_ARRAY);
+            delay(DELAY_TIME_STABILIZING_ARRAY);
           }
         } while (!is_stabilizing(differenceAverageSoilHumidity));
       }
 
       // Wait for 10 minutes after watering to check humidity again
-      ThisThread::sleep_for(10min);
+      delay(360000);
       float humidityAfterWatering = get_average_soil_humidity();
 
 
@@ -154,7 +154,7 @@ void pump_loop() {
     }
 
     if (HOUR > endTime) {
-      ThisThread::sleep_for((HOUR - endTime));
+      delay((HOUR - endTime));
     }
     endTime = 0;
     isPumping = false;
@@ -232,7 +232,7 @@ void light_sensor_loop() {
         }
       }
 
-      ThisThread::sleep_for(10000);  // Sleep for 10 seconds
+      delay(10000);  // Sleep for 10 seconds
     }
   }
 }
@@ -253,7 +253,7 @@ void temperature_loop() {
       digitalWrite(FAN_PIN, HIGH);  // Turn fan off
     }
 
-    ThisThread::sleep_for(1800000);  //30min
+    delay(1800000);  //30min
   }
 }
 
@@ -299,12 +299,13 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  String line2_start = "Light status: ";
   if (isGettingLight) {
 
-    String line2_start = "Light status: lit";
+    line2_start = "Light status: lit";
   } else {
 
-    String line2_start = "Light status: dark times";
+    line2_start = "Light status: dark times";
   }
 
   int charWidth = 6;                                    // Adjust this depending on your font size
@@ -328,10 +329,12 @@ void loop() {
   display.print(line2);
   display.display();
 
+  String line3 = "Pump status: ";
+
   if (isPumping) {
-    String line3 = "Pump status: is pumping";
+    line3 = "Pump status: is pumping";
   } else {
-    String line3 = "Pump status: " + String((HOUR - endTime) / 60000) + "min left until next pump";
+    line3 = "Pump status: " + String((HOUR - endTime) / 60000) + "min left until next pump";
   }
 
 
@@ -340,7 +343,7 @@ void loop() {
   display.display();
 
 
-  String line1_start = "Humidity " + averageSoilHumidity + "%";
+  String line1_start = "Humidity " + String(averageSoilHumidity) + "%";
 
 
   paddingSpaces = maxChars - line1_start.length();  // Calculate how many spaces you need
