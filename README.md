@@ -18,7 +18,7 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 - [ ] Build Greenhouse
 - [ ] Display
 - [ ] Smartphone Connection
-- [ ] Poster
+- [ ] Poster (Fritzing)
 - [ ] Report
 
 
