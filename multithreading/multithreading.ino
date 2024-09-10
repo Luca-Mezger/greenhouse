@@ -6,6 +6,13 @@ using namespace mbed;
 using namespace rtos;
 using namespace std::literals::chrono_literals;
 
+#include <Arduino_HTS221.h>
+
+#define FAN_PIN D4
+#define TEMPERATURE_THRESHOLD 27.00
+#define BUFFER 2.00
+
+
 #define SOIL_HUMIDITY_PIN A0
 #define RELATIVE_SOIL_HUMIDITY_UPPER_LIMIT 699
 #define RELATIVE_SOIL_HUMIDITY_LOWER_LIMIT 363
@@ -28,8 +35,8 @@ using namespace std::literals::chrono_literals;
 #define THRESHOLD_PERCENTAGE 50  // Brightness percentage threshold
 
 Thread pump_thread;
-Thread led_thread;
 Thread light_sensor_thread;  // New thread for light sensor functionality
+Thread temperature_thread;¨
 
 // Variables for water pump/humidity
 float previousAverageSoilHumidity = 0;
@@ -220,15 +227,48 @@ void light_sensor_loop() {
         }
     }
 }
+
+
+// ------------------------------------------------
+// Temperature
+// ------------------------------------------------
+void temperature_loop() {
+  while (1) {
+    float temperature = HTS.readTemperature();
+    Serial.println(temperature);
+
+    if (temperature > TEMPERATURE_THRESHOLD) {
+      digitalWrite(FAN_PIN, LOW);  // Turn fan on
+    } else if (temperature < TEMPERATURE_THRESHOLD - BUFFER) {
+      digitalWrite(FAN_PIN, HIGH);  // Turn fan off
+    }
+
+    ThisThread::sleep_for(1800000); //30min
+  }
+}
+
 void setup() {
   Serial.begin(9600);
+  
+  // Initialize fan pin
+  pinMode(FAN_PIN, OUTPUT);
+  digitalWrite(FAN_PIN, HIGH);  // Start with fan off
+  
+  // Initialize temperature sensor
+  if (!HTS.begin()) {
+    Serial.println("Failed to initialize humidity temperature sensor!");
+    while (1);
+  }
+
   for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
     differenceAverageSoilHumidity[i] = 0;
   }
 
   pump_thread.start(pump_loop);
-  light_sensor_thread.start(light_sensor_loop); 
+  light_sensor_thread.start(light_sensor_loop);
+  temperature_thread.start(temperature_loop); 
 }
+
 
 void loop() {
   //empty
