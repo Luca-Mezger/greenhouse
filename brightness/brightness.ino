@@ -3,15 +3,12 @@
 #include "GravityRtc.h"
 #include "Wire.h"
 
-//#define HOUR_DURATION 3600000  // 1 hour in milliseconds
-
-//test
-#define HOUR_DURATION 10000 //10sek
+#define HOUR_DURATION 3600000  // 1 hour in milliseconds
 
 #define MIN_BRIGHTNESS 6
 #define MAX_BRIGHTNESS 4097
-#define LIGHT_THRESHOLD_HOURS 12
-#define LED_PIN D12
+#define LIGHT_THRESHOLD_HOURS 8
+#define LED_PIN D10
 #define THRESHOLD_PERCENTAGE 50  // Brightness percentage threshold
 
 Nano33BLEColourData colourData;
@@ -72,11 +69,14 @@ void loop() {
             }
 
             int remainingHours = 24 - rtc.hour;
+            Serial.println(remainingHours);
 
             if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
                 int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
                 if (remainingHours <= requiredLightHours) {
                     digitalWrite(LED_PIN, LOW);  // Turn on light
+                    Serial.println("Light on!!!");
+
                 } else {
                     digitalWrite(LED_PIN, HIGH);  // Turn off light
                 }
