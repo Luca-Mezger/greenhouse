@@ -164,3 +164,6 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
 ---
 
 #### Display Logic
+
+- Take the variables needed to display
+- Clear the screen after awhile and change information displayed
