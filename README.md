@@ -10,6 +10,7 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 ## Todo
 - [ ] Detection Water Supply (empty or not)
 - [ ] Temperature Sensor/Fan
+- [ ] Multithreading
 - [ ] Build Greenhouse
 - [ ] Display
 - [ ] Smartphone Connection
@@ -21,7 +22,7 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 ## Work journal
 ### 09 September 2024
 
-#### Decided on Materials needed:
+#### Decided on materials needed:
   - Arduino Nano 33 Sense BLE (contains various sensors)
   - Soil Moisture Sensor - to detect water level in soil
   - LED light strips - to supply plant with needed light
@@ -38,13 +39,46 @@ These values correspond to 0% humidity and 100% humidity:
    $f(x) = mx + b = -0.29761x + 208.0357$
 
 #### Relay
+A relay is like a remote control switch that lets a small electrical signal turn a bigger device on or off. It allows you to control things like motors or lights using just a small amount of power, keeping the control system safe and separate from the high power used by the device. We use it to power our water pump and the LED strips.
 
+#### Voltage Regulator
+With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We use it to power the LED strips, as they need 12 V to function.
 
+#### Humidity Logic
+```c++
+  float averageSoilHumidity = get_average_soil_humidity();
 
-Subsequently we began with the work with the relay, which we needed because the Arduino itself can't provide sufficient voltage. Here we firstly tried to understand it by using it not connected to anything and after connected to the water pump. Then we saw that the tube of the water pump was too long and cut a bit off. What we wanted to see was how much water would come out after a certain time and we decided that two seconds was the best time for watering the mint plant.
+  // Check if moisture is below threshold
+  if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
+    int currentTime = millis();
 
-It was decided that we use GitHub so that we can work on the same file somewhat at the same time.
+    while (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
 
-Then we realized the stabilising code we were using was not very good, so we decided to recode it. 
+      onLowSoilMoisture();
 
-While that was happening we also looked at how the lights would work.
+      do {
+        for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
+          averageSoilHumidity = get_average_soil_humidity();
+          addElement(differenceAverageSoilHumidity, averageSoilHumidity);
+          delay(DELAY_TIME_STABILIZING_ARRAY);
+        }
+      } while (!is_stabilizing(differenceAverageSoilHumidity));
+    }
+
+    endTime = millis() - currentTime;
+  }
+
+  if (HOUR > endTime) {
+    delay(HOUR - endTime);
+  } else {
+    delay(0);
+  }
+  endTime = 0;
+```
+We check the moisture level every hour, and if the level
+
+#### LED Logic
+
+#### Temperature Logic
+
+#### Display Logic
