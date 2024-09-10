@@ -8,6 +8,10 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 
 
 ## Todo
+- [x] Light detection
+- [x] Automatic Watering
+- [x] Soil Humidity Sensor
+- [x] RTC Module
 - [x] Detection Water Supply (empty or not)
 - [x] Temperature Sensor/Fan
 - [x] Multithreading
