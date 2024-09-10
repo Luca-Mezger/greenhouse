@@ -3,15 +3,12 @@
 #include "Nano33BLEColour.h"
 #include "GravityRtc.h"
 #include "Wire.h"
-using namespace mbed;
-using namespace rtos;
-using namespace std::literals::chrono_literals;
 
 #include <Arduino_HTS221.h>
 
 #define FAN_PIN D4
 #define TEMPERATURE_THRESHOLD 27.00
-#define BUFFER 2.00 
+#define BUFFER 2.00
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
@@ -37,16 +34,14 @@ using namespace std::literals::chrono_literals;
 #define LIGHT_THRESHOLD_HOURS 8
 #define THRESHOLD_PERCENTAGE 50  // Brightness percentage threshold
 
-hread pump_thread;
-Thread light_sensor_thread;  // New thread for light sensor functionality
-Thread temperature_thread;
-
 // Variables for water pump/humidity
 float previousAverageSoilHumidity = 0;
 float differenceAverageSoilHumidity[HUMIDITY_MOISTURE_AVERAGE_ELEMENTS];
 int endTime = 0;
 int head = 0;   // Keeps track of the next position to insert the new element
 int count = 0;  // Keeps track of the number of elements added
+bool isPumping = false;
+float averageSoilHumidity;
 
 // Variables for light sensor
 Nano33BLEColourData colourData;
@@ -55,6 +50,11 @@ float brightnessHistory[24];
 int hoursWithLight = 0;
 float hourlyBrightnessAccumulator = 0;
 int brightnessReadingsCount = 0;
+bool isGettingLight = false;
+
+float temperature;
+
+int x_coord_display, min_x_coord_display;
 
 // ------------------------------------------------
 // WATER PUMP/HUMIDITY
@@ -82,7 +82,7 @@ float get_average_soil_humidity(int numReadings = 10000) {
   for (int i = 0; i < numReadings; i++) {
     int sensorValue = analogRead(SOIL_HUMIDITY_PIN);
     totalSoilHumidity += calculate_relative_soil_humidity(sensorValue);
-    ThisThread::sleep_for(DELAY_TIME_AVERAGES);
+    delay(DELAY_TIME_AVERAGES);
   }
   return totalSoilHumidity / numReadings;
 }
@@ -112,17 +112,18 @@ bool is_stabilizing(float humidityArray[HUMIDITY_MOISTURE_AVERAGE_ELEMENTS], flo
 
 void onLowSoilMoisture() {
   digitalWrite(PUMP, LOW);
-  ThisThread::sleep_for(DELAY_TIME_PUMP);
+  delay(DELAY_TIME_PUMP);
   digitalWrite(PUMP, HIGH);
 }
 
 void onNoWaterEffect() {
-    // Serial.println("watertank empty");
+  // Serial.println("watertank empty");
 }
 
 void pump_loop() {
   while (1) {
-    float averageSoilHumidity = get_average_soil_humidity();
+    isPumping = true;
+    averageSoilHumidity = get_average_soil_humidity();
 
     if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
       float humidityBeforeWatering = averageSoilHumidity;  // Save humidity before watering
@@ -146,7 +147,7 @@ void pump_loop() {
 
 
       if (humidityAfterWatering - humidityBeforeWatering <= 1.5) {
-        onNoWaterEffect();  
+        onNoWaterEffect();
       }
 
       endTime = millis() - currentTime;
@@ -156,8 +157,10 @@ void pump_loop() {
       ThisThread::sleep_for((HOUR - endTime));
     }
     endTime = 0;
+    isPumping = false;
   }
 }
+
 
 // ------------------------------------------------
 // LIGHT SENSOR
@@ -170,66 +173,70 @@ float calculateBrightness(int r, int g, int b) {
 }
 
 void light_sensor_loop() {
-    rtc.setup();
-    rtc.adjustRtc(F(__DATE__), F(__TIME__));
-    Colour.begin();
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);  // Initially light is off
+  rtc.setup();
+  rtc.adjustRtc(F(__DATE__), F(__TIME__));
+  Colour.begin();
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);  // Initially light is off
 
-    while (1) {
-        rtc.read();
+  while (1) {
+    rtc.read();
 
-        if (Colour.pop(colourData)) {
-            float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
-            hourlyBrightnessAccumulator += brightness;
-            brightnessReadingsCount++;
+    if (Colour.pop(colourData)) {
+      float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+      hourlyBrightnessAccumulator += brightness;
+      brightnessReadingsCount++;
 
-            // Perform hourly check
-            if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
-                float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
+      // Perform hourly check
+      if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
+        float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
 
-                // shift brightness history and store the current hour's average brightness
-                for (int i = 1; i < 24; i++) {
-                    brightnessHistory[i - 1] = brightnessHistory[i];
-                }
-                brightnessHistory[23] = averageBrightnessForHour;
-
-                // Reset
-                hourlyBrightnessAccumulator = 0;
-                brightnessReadingsCount = 0;
-
-                // count: hours with sufficient light
-                hoursWithLight = 0;
-                for (int i = 0; i < 24; i++) {
-                    if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
-                        hoursWithLight++;
-                    }
-                }
-
-                int remainingHours = 24 - rtc.hour;
-
-                // If there havent been enough light hours and remaining hours are insufficient
-                if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
-                    int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
-
-                    float currentBrightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
-                    
-                    // Only turn on the LED if external light is below 50%
-                    if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
-                        digitalWrite(LED_PIN, LOW);  // Turn on the LED 
-                        // Serial.println("Light on!!!");
-                    } else {
-                        digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
-                    }
-                } else {
-                    digitalWrite(LED_PIN, HIGH);  // Turn off the LED if enough litght
-                }
-            }
-
-            ThisThread::sleep_for(10000);  // Sleep for 10 seconds
+        // shift brightness history and store the current hour's average brightness
+        for (int i = 1; i < 24; i++) {
+          brightnessHistory[i - 1] = brightnessHistory[i];
         }
+        brightnessHistory[23] = averageBrightnessForHour;
+
+        // Reset
+        hourlyBrightnessAccumulator = 0;
+        brightnessReadingsCount = 0;
+
+        // count: hours with sufficient light
+        hoursWithLight = 0;
+        for (int i = 0; i < 24; i++) {
+          if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+            hoursWithLight++;
+            isGettingLight = true;
+          } else {
+            isGettingLight = false;
+          }
+        }
+
+        int remainingHours = 24 - rtc.hour;
+
+        // If there havent been enough light hours and remaining hours are insufficient
+        if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+          int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+
+          float currentBrightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+
+          // Only turn on the LED if external light is below 50%
+          if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
+            digitalWrite(LED_PIN, LOW);  // Turn on the LED
+                                         // Serial.println("Light on!!!");
+          } else {
+            digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
+          }
+        } else {
+          digitalWrite(LED_PIN, HIGH);  // Turn off the LED if enough litght
+        }
+      }
+
+      ThisThread::sleep_for(10000);  // Sleep for 10 seconds
     }
+  }
 }
+
 
 
 // ------------------------------------------------
@@ -237,7 +244,7 @@ void light_sensor_loop() {
 // ------------------------------------------------
 void temperature_loop() {
   while (1) {
-    float temperature = HTS.readTemperature();
+    temperature = HTS.readTemperature();
     // Serial.println(temperature);
 
     if (temperature > TEMPERATURE_THRESHOLD) {
@@ -246,9 +253,11 @@ void temperature_loop() {
       digitalWrite(FAN_PIN, HIGH);  // Turn fan off
     }
 
-    ThisThread::sleep_for(1800000); //30min
+    ThisThread::sleep_for(1800000);  //30min
   }
 }
+
+
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
@@ -262,76 +271,93 @@ void setup() {
     for (;;)
       ;
   }
-// Serial.begin(9600);
-  
+  // Serial.begin(9600);
+
   // Initialize fan pin
   pinMode(FAN_PIN, OUTPUT);
+  Serial.begin(9600);
   digitalWrite(FAN_PIN, HIGH);  // Start with fan off
-  
+
   // Initialize temperature sensor
   if (!HTS.begin()) {
     // Serial.println("Failed to initialize humidity temperature sensor!");
-    while (1);
+    while (1)
+      ;
   }
 
   for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
     differenceAverageSoilHumidity[i] = 0;
   }
+  display.begin(SSD1306_SWITCHCAPVCC);
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setTextWrap(false);
+  x_coord_display = display.width();
+}
 
-  pump_thread.start(pump_loop);
-  light_sensor_thread.start(light_sensor_loop);
-  temperature_thread.start(temperature_loop); 
-}
-  
-}
+
 
 void loop() {
   // put your main code here, to run repeatedly:
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0);
-  // Display static text
-  display.print("Humidity ");
-  display.print(averageSoilHumidity);
-  display.println("%");
-  
+  if (isGettingLight) {
 
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 20);
-  display.print("Pump status:");
-  if (isPumping) {
-    display.print(" is pumping...");
+    String line2_start = "Light status: lit";
   } else {
-    display.print((HOUR - endTime) / 60000 + "min left");
+
+    String line2_start = "Light status: dark times";
   }
+
+  int charWidth = 6;                                    // Adjust this depending on your font size
+  int maxChars = display.width() / charWidth;           // Calculate how many characters fit on the display
+  int paddingSpaces = maxChars - line2_start.length();  // Calculate how many spaces you need
+
+  // Create a string with the right amount of padding
+  String paddedString;
+  for (int i = 0; i < paddingSpaces; i++) {
+    paddedString += " ";
+  }
+
+
+  String line2_end = "Hours of Light: " + String(hoursWithLight);
+  String line2 = line2_start + paddedString + line2_end;
+
+  min_x_coord_display = -6 * line2.length();
+
+  display.clearDisplay();
+  display.setCursor(x_coord_display, 10);
+  display.print(line2);
   display.display();
 
-// something to delay time
-  //Temperature
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0);
-  display.print(temperature + "°C");
-
-  //Light
-
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 10);
-  display.print("Light status:");
-  if (isGettingLight) {
-    display.print(" lit");
+  if (isPumping) {
+    String line3 = "Pump status: is pumping";
   } else {
-    display.print(" dark times");
+    String line3 = "Pump status: " + String((HOUR - endTime) / 60000) + "min left until next pump";
   }
 
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-  display.setCursor(0, 20);
-  display.print("Hours of light: ");
-  display.print(hoursWithLight);
-  
+
+  display.setCursor(x_coord_display, 20);
+  display.print(line3);
+  display.display();
+
+
+  String line1_start = "Humidity " + averageSoilHumidity + "%";
+
+
+  paddingSpaces = maxChars - line1_start.length();  // Calculate how many spaces you need
+
+  // Create a string with the right amount of padding
+  paddedString = "";
+  for (int i = 0; i < paddingSpaces; i++) {
+    paddedString += " ";
+  }
+
+
+  String line1_end = String(temperature) + "°C";
+  String line1 = line1_start + paddedString + line1_end;
+
+  display.setCursor(x_coord_display, 0);
+  display.print(line1);
+  display.display();
+
+  if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
 }

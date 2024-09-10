@@ -130,7 +130,7 @@ void setup() {
   Serial.begin(19200);
 
   if (!HTS.begin()) {
-    Serial.println("Failed to initialize humidity temperature sensor!");
+    Serial.println("Failed to initialize humidity temperature senfsor!");
     while (1)
       ;
   }
