@@ -7,6 +7,16 @@ The goal for this project week was to make a fully functioning automated greenho
 We used Arduino a hardware and software platform. Arduino has these mini computers. Where not a lot of space is needed and it is possible to code what they do.
 
 
+## Todo
+- [ ] Detection Water Supply (empty or not)
+- [ ] Temperature Sensor/Fan
+- [ ] Build Greenhouse
+- [ ] Display
+- [ ] Smartphone Connection
+- [ ] Poster
+- [ ] Report
+
+
 
 ## Work journal
 ### 09 September 2024
