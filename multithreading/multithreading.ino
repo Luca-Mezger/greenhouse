@@ -1,4 +1,7 @@
 #include <mbed.h>
+#include "Nano33BLEColour.h"
+#include "GravityRtc.h"
+#include "Wire.h"
 using namespace mbed;
 using namespace rtos;
 using namespace std::literals::chrono_literals;
@@ -14,31 +17,42 @@ using namespace std::literals::chrono_literals;
 #define DELAY_TIME_STABILIZING_ARRAY 10000
 #define HOUR 3600000
 #define PUMP D11
-#define LED D12
+#define LED_PIN D10
 #define SOIL_MOISTURE_THRESHOLD 35
 #define HUMIDITY_MOISTURE_AVERAGE_ELEMENTS 9
 
+#define HOUR_DURATION 3600000  // 1 hour in milliseconds
+#define MIN_BRIGHTNESS 6
+#define MAX_BRIGHTNESS 4097
+#define LIGHT_THRESHOLD_HOURS 8
+#define THRESHOLD_PERCENTAGE 50  // Brightness percentage threshold
+
 Thread pump_thread;
 Thread led_thread;
-
-// ------------------------------------------------
-// WATER PUMP/HUMIDITY
-// ------------------------------------------------
+Thread light_sensor_thread;  // New thread for light sensor functionality
 
 // Variables for water pump/humidity
 float previousAverageSoilHumidity = 0;
 float differenceAverageSoilHumidity[HUMIDITY_MOISTURE_AVERAGE_ELEMENTS];
 int endTime = 0;
-
 int head = 0;   // Keeps track of the next position to insert the new element
 int count = 0;  // Keeps track of the number of elements added
 
-// Function to add a new element and overwrite the oldest in humidity array
-void addElement(float arr[], int newElement) {
-  arr[head] = newElement;                                  // Add new element at the 'head' position
-  head = (head + 1) % HUMIDITY_MOISTURE_AVERAGE_ELEMENTS;  // Move 'head' to the next position (circularly)
+// Variables for light sensor
+Nano33BLEColourData colourData;
+GravityRtc rtc;
+float brightnessHistory[24];
+int hoursWithLight = 0;
+float hourlyBrightnessAccumulator = 0;
+int brightnessReadingsCount = 0;
 
-  // Keep count of how many elements are filled (useful for printing)
+// ------------------------------------------------
+// WATER PUMP/HUMIDITY
+// ------------------------------------------------
+
+void addElement(float arr[], int newElement) {
+  arr[head] = newElement;
+  head = (head + 1) % HUMIDITY_MOISTURE_AVERAGE_ELEMENTS;
   if (count < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS) {
     count++;
   }
@@ -65,39 +79,28 @@ float get_average_soil_humidity(int numReadings = 10000) {
 
 float findMaxDifference(float arr[], int size = 9) {
   if (size < 2) {
-    return -1;  // Return -1 if there are not enough elements to find a difference
+    return -1;
   }
-
-  float minValue = arr[0];  // Initialize the minimum value as the first element
-  float maxDiff = -32768;   // Initialize the maximum difference (using an arbitrary small value)
-
-  // Traverse the array starting from the second element
+  float minValue = arr[0];
+  float maxDiff = -32768;
   for (int i = 1; i < size; ++i) {
-    float diff = arr[i] - minValue;  // Calculate the difference
-
-    // Update maxDiff if the current difference is larger
+    float diff = arr[i] - minValue;
     if (diff > maxDiff) {
       maxDiff = diff;
     }
-
-    // Update minValue if the current element is smaller
     if (arr[i] < minValue) {
       minValue = arr[i];
     }
   }
-
   return maxDiff;
 }
 
-// calculates rate of change
 bool is_stabilizing(float humidityArray[HUMIDITY_MOISTURE_AVERAGE_ELEMENTS], float threshold = STABILIZATION_THRESHOLD) {
   float maxDiff = findMaxDifference(humidityArray, HUMIDITY_MOISTURE_AVERAGE_ELEMENTS);
   return (maxDiff < threshold);
 }
 
-// Function to call when soil moisture is below the threshold
 void onLowSoilMoisture() {
-  // Serial.println("Soil moisture is below threshold! pumping...");
   digitalWrite(PUMP, LOW);
   ThisThread::sleep_for(DELAY_TIME_PUMP);
   digitalWrite(PUMP, HIGH);
@@ -106,18 +109,10 @@ void onLowSoilMoisture() {
 void pump_loop() {
   while (1) {
     float averageSoilHumidity = get_average_soil_humidity();
-
-    // Serial.print("Average Soil Humidity: ");
-    // Serial.println(averageSoilHumidity);
-
-    // Check if moisture is below threshold
     if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
       int currentTime = millis();
-
       while (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
-
         onLowSoilMoisture();
-
         do {
           for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
             averageSoilHumidity = get_average_soil_humidity();
@@ -126,10 +121,8 @@ void pump_loop() {
           }
         } while (!is_stabilizing(differenceAverageSoilHumidity));
       }
-
       endTime = millis() - currentTime;
     }
-
     if (HOUR > endTime) {
       ThisThread::sleep_for((HOUR - endTime));
     }
@@ -137,21 +130,70 @@ void pump_loop() {
   }
 }
 
+// ------------------------------------------------
+// LIGHT SENSOR
+// ------------------------------------------------
 
+float calculateBrightness(int r, int g, int b) {
+  float brightness = (r + g + b) / 3.0;
+  brightness = clip(brightness, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+  return ((brightness - MIN_BRIGHTNESS) / (MAX_BRIGHTNESS - MIN_BRIGHTNESS)) * 100;
+}
 
+void light_sensor_loop() {
+  rtc.setup();
+  rtc.adjustRtc(F(__DATE__), F(__TIME__));
+  Colour.begin();
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
+
+  while (1) {
+    rtc.read();
+    if (Colour.pop(colourData)) { //gets recent color data
+      float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+      hourlyBrightnessAccumulator += brightness;
+      brightnessReadingsCount++;
+      if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
+        float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
+        for (int i = 1; i < 24; i++) {
+          brightnessHistory[i - 1] = brightnessHistory[i];
+        }
+        brightnessHistory[23] = averageBrightnessForHour;
+        hourlyBrightnessAccumulator = 0;
+        brightnessReadingsCount = 0;
+        hoursWithLight = 0;
+        for (int i = 0; i < 24; i++) {
+          if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+            hoursWithLight++;
+          }
+        }
+        int remainingHours = 24 - rtc.hour;
+        if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+          int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+          if (remainingHours <= requiredLightHours) {
+            digitalWrite(LED_PIN, LOW); //led on
+          } else {
+            digitalWrite(LED_PIN, HIGH);
+          }
+        } else {
+          digitalWrite(LED_PIN, HIGH);
+        }
+      }
+      ThisThread::sleep_for(10000);
+    }
+  }
+}
 
 void setup() {
-
   Serial.begin(9600);
-
-  // initialize humidity array
   for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
     differenceAverageSoilHumidity[i] = 0;
   }
+
   pump_thread.start(pump_loop);
-  // led_thread.start();
+  light_sensor_thread.start(light_sensor_loop); 
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  //empty
 }
