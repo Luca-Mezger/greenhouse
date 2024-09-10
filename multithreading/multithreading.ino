@@ -141,49 +141,66 @@ float calculateBrightness(int r, int g, int b) {
 }
 
 void light_sensor_loop() {
-  rtc.setup();
-  rtc.adjustRtc(F(__DATE__), F(__TIME__));
-  Colour.begin();
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH);
+    rtc.setup();
+    rtc.adjustRtc(F(__DATE__), F(__TIME__));
+    Colour.begin();
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH);  // Initially light is off
 
-  while (1) {
-    rtc.read();
-    if (Colour.pop(colourData)) { //gets recent color data
-      float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
-      hourlyBrightnessAccumulator += brightness;
-      brightnessReadingsCount++;
-      if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
-        float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
-        for (int i = 1; i < 24; i++) {
-          brightnessHistory[i - 1] = brightnessHistory[i];
+    while (1) {
+        rtc.read();
+
+        if (Colour.pop(colourData)) {
+            float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+            hourlyBrightnessAccumulator += brightness;
+            brightnessReadingsCount++;
+
+            // Perform hourly check
+            if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
+                float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
+
+                // shift brightness history and store the current hour's average brightness
+                for (int i = 1; i < 24; i++) {
+                    brightnessHistory[i - 1] = brightnessHistory[i];
+                }
+                brightnessHistory[23] = averageBrightnessForHour;
+
+                // Reset
+                hourlyBrightnessAccumulator = 0;
+                brightnessReadingsCount = 0;
+
+                // count: hours with sufficient light
+                hoursWithLight = 0;
+                for (int i = 0; i < 24; i++) {
+                    if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+                        hoursWithLight++;
+                    }
+                }
+
+                int remainingHours = 24 - rtc.hour;
+
+                // If there havent been enough light hours and remaining hours are insufficient
+                if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+                    int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+
+                    float currentBrightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+                    
+                    // Only turn on the LED if external light is below 50%
+                    if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
+                        digitalWrite(LED_PIN, LOW);  // Turn on the LED 
+                        Serial.println("Light on!!!");
+                    } else {
+                        digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
+                    }
+                } else {
+                    digitalWrite(LED_PIN, HIGH);  // Turn off the LED if enough litght
+                }
+            }
+
+            ThisThread::sleep_for(10000);  // Sleep for 10 seconds
         }
-        brightnessHistory[23] = averageBrightnessForHour;
-        hourlyBrightnessAccumulator = 0;
-        brightnessReadingsCount = 0;
-        hoursWithLight = 0;
-        for (int i = 0; i < 24; i++) {
-          if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
-            hoursWithLight++;
-          }
-        }
-        int remainingHours = 24 - rtc.hour;
-        if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
-          int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
-          if (remainingHours <= requiredLightHours) {
-            digitalWrite(LED_PIN, LOW); //led on
-          } else {
-            digitalWrite(LED_PIN, HIGH);
-          }
-        } else {
-          digitalWrite(LED_PIN, HIGH);
-        }
-      }
-      ThisThread::sleep_for(10000);
     }
-  }
 }
-
 void setup() {
   Serial.begin(9600);
   for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
