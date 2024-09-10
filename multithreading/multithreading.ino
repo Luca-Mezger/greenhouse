@@ -106,13 +106,21 @@ void onLowSoilMoisture() {
   digitalWrite(PUMP, HIGH);
 }
 
+void onNoWaterEffect() {
+    Serial.println("watertank empty");
+}
+
 void pump_loop() {
   while (1) {
     float averageSoilHumidity = get_average_soil_humidity();
+
     if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
+      float humidityBeforeWatering = averageSoilHumidity;  // Save humidity before watering
       int currentTime = millis();
+
       while (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
         onLowSoilMoisture();
+
         do {
           for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
             averageSoilHumidity = get_average_soil_humidity();
@@ -121,8 +129,19 @@ void pump_loop() {
           }
         } while (!is_stabilizing(differenceAverageSoilHumidity));
       }
+
+      // Wait for 10 minutes after watering to check humidity again
+      ThisThread::sleep_for(10min);
+      float humidityAfterWatering = get_average_soil_humidity();
+
+
+      if (humidityAfterWatering - humidityBeforeWatering <= 1.5) {
+        onNoWaterEffect();  
+      }
+
       endTime = millis() - currentTime;
     }
+
     if (HOUR > endTime) {
       ThisThread::sleep_for((HOUR - endTime));
     }
@@ -188,7 +207,7 @@ void light_sensor_loop() {
                     // Only turn on the LED if external light is below 50%
                     if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
                         digitalWrite(LED_PIN, LOW);  // Turn on the LED 
-                        Serial.println("Light on!!!");
+                        //Serial.println("Light on!!!");
                     } else {
                         digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
                     }
