@@ -8,9 +8,9 @@ We used Arduino a hardware and software platform. Arduino has these mini compute
 
 
 ## Todo
-- [ ] Detection Water Supply (empty or not)
+- [x] Detection Water Supply (empty or not)
 - [x] Temperature Sensor/Fan
-- [ ] Multithreading
+- [x] Multithreading
 - [ ] Build Greenhouse
 - [ ] Display
 - [ ] Smartphone Connection
