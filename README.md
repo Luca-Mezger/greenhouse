@@ -166,5 +166,78 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
 
 #### Display Logic
 
-- Take the variables needed to display
-- Clear the screen after awhile and change information displayed
+- Scrolling text display (horizontal)
+- Get information from each thread (global variables)
+- Ensure that full text gets scrolled before reset
+- Notify user when water tank is empty
+
+```c++
+  String line2_start = "Light status: ";
+  if (isGettingLight) {
+
+    line2_start = "Light status: lit";
+  } else {
+
+    line2_start = "Light status: dark times";
+  }
+
+  int charWidth = 6;                                    // Adjust this depending on your font size
+  int maxChars = display.width() / charWidth;           // Calculate how many characters fit on the display
+  int paddingSpaces = maxChars - line2_start.length();  // Calculate how many spaces you need
+
+  // Create a string with the right amount of padding
+  String paddedString;
+  for (int i = 0; i < paddingSpaces; i++) {
+    paddedString += " ";
+  }
+
+  if (paddedString == "") {
+    paddedString = "  ";
+  }
+
+
+  String line2_end = "Hours of Light: " + String(hoursWithLight);
+  String line2 = line2_start + paddedString + line2_end;
+
+  min_x_coord_display = -6 * line2.length();
+
+  display.clearDisplay();
+  display.setCursor(x_coord_display, 10);
+  display.print(line2);
+  display.display();
+
+  String line3 = "Pump status: ";
+
+  if (lowWater) {
+    line3 = "NO WATER IN TANK! REFILL!";
+  } else {
+    line3 = "";
+  }
+
+
+  display.setCursor(x_coord_display, 20);
+  display.print(line3);
+  display.display();
+
+
+  String line1_start = "Humidity " + String(averageSoilHumidity) + "%";
+
+
+  paddingSpaces = maxChars - line1_start.length();  // Calculate how many spaces you need
+
+  // Create a string with the right amount of padding
+  paddedString = "";
+  for (int i = 0; i < paddingSpaces; i++) {
+    paddedString += " ";
+  }
+
+
+  String line1_end = String(temperature) + "°C";
+  String line1 = line1_start + paddedString + line1_end;
+
+  display.setCursor(x_coord_display, 0);
+  display.print(line1);
+  display.display();
+
+  if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
+```
