@@ -65,6 +65,7 @@ int hoursWithLight = 0;
 float hourlyBrightnessAccumulator = 0;
 int brightnessReadingsCount = 0;
 bool isGettingLight = false;
+float brightness;
 //Display decalration
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
@@ -193,7 +194,7 @@ void light_sensor_loop() {
   while (1) {
     // Read light level from BH1750 sensor
     float lux = lightMeter.readLightLevel();
-    float brightness = calculateBrightnessFromLux(lux);
+    brightness = calculateBrightnessFromLux(lux);
 
     //Serial.println(lux);
     // Accumulate brightness values for the hour
@@ -219,10 +220,7 @@ void light_sensor_loop() {
       for (int i = 0; i < 24; i++) {
         if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
           hoursWithLight++;
-          isGettingLight = true;
-        } else {
-          isGettingLight = false;
-        }
+        } 
       }
 
       // Determine if the LED needs to be turned on for additional light
@@ -270,7 +268,7 @@ void temperature_loop() {
 void display_loop() {
   while (1) {
   String line2_start = "Light status: ";
-  if (isGettingLight) {
+  if (brightness > 50) {
 
     line2_start = "Light status: lit";
   } else {
