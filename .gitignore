@@ -1,0 +1,51 @@
+# Node.js related (frontend)
+/webapp/frontend/node_modules
+/webapp/frontend/.svelte-kit
+/webapp/frontend/.turbo
+/webapp/frontend/build
+
+# Logs
+/webappnpm-debug.log*
+/webappyarn-debug.log*
+/webappyarn-error.log*
+/webapppnpm-debug.log*
+
+# SvelteKit specific (frontend)
+/webapp/frontend/.svelte-kit
+/webapp/frontend/.turbo
+/webapp/frontend/build
+
+# dotenv environment variables file (both frontend and backend)
+webapp/frontend/.env
+webapp/frontend/.env.local
+webapp/frontend/.env.*.local
+webapp/backend/.env
+webapp/backend/.env.local
+webapp/backend/.env.*.local
+
+# Python related (backend)
+/webapp/webappbackend/__pycache__/
+webapp/backend/*.py[cod]
+webapp/backend/*.sqlite3
+webapp/backend/*.db
+webapp/backend/*.sqlite
+
+
+# Virtual environment (backend)
+/webapp/backend/venv/
+webapp/backend/venv
+webapp/backend/*.egg-info/
+
+# Flask specific (backend)
+webapp/backend/instance/
+webapp/backend/.pytest_cache/
+webapp/backend/*.pyc
+
+# VS Code specific
+webapp/.vscode/
+
+# MacOS specific
+webapp/.DS_Store
+
+# Windows specific
+webapp/Thumbs.db
