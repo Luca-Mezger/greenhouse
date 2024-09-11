@@ -13,6 +13,19 @@ CORS(app)
 engine = create_engine('sqlite:///data/greenhouse.db')
 API_KEY = os.getenv('API_KEY')
 
+# Create table if it doesn't exist
+with engine.connect() as connection:
+    connection.execute(text("""
+        CREATE TABLE IF NOT EXISTS SensorReadings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sensor_type TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            value REAL
+        )
+    """))
+
+
+
 @app.route('/api_data', methods=['GET'])
 def sensor_data():
     """
@@ -61,10 +74,12 @@ def add_sensor_data():
     """
     Add sensor data to the database. Requires an API key for authorization.
 
-    Input (JSON body):
-    - sensor_type (str): The type of sensor (e.g., 'temperature', 'humidity').
-    - timestamp (str): The date and time of the reading in 'YYYY-MM-DD HH:MM:SS' format.
-    - value (float): The sensor reading value.
+    Input (Form URL-encoded body):
+    - light_status (str): The light status (e.g., 'lit', 'dark times').
+    - hours_of_light (int): The hours of light.
+    - pump_status (str): The status of the water pump.
+    - humidity (float): The humidity value.
+    - temperature (float): The temperature value.
     - API key in the request headers.
     """
     # Check for API key
@@ -72,29 +87,62 @@ def add_sensor_data():
     if api_key != API_KEY:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    # Get JSON data from the request
-    data = request.get_json()
-    sensor_type = data.get('sensor_type')
-    timestamp = data.get('timestamp')
-    value = data.get('value')
+    # Get form data from the request
+    light_status = request.form.get('light_status')
+    hours_of_light = request.form.get('hours_of_light')
+    pump_status = request.form.get('pump_status')
+    humidity = request.form.get('humidity')
+    temperature = request.form.get('temperature')
 
-    # Validate the input
-    if not sensor_type or not timestamp or value is None:
+    # Validate the input data
+    if not light_status or not hours_of_light or not pump_status or not humidity or not temperature:
         return jsonify({'error': 'Missing required fields'}), 400
 
-    # Insert the data into the database
-    with engine.connect() as connection:
-        query = text("""
-            INSERT INTO SensorReadings (sensor_type, timestamp, value)
-            VALUES (:sensor_type, :timestamp, :value)
-        """)
-        connection.execute(query, {
-            'sensor_type': sensor_type,
-            'timestamp': timestamp,
-            'value': value
-        })
+    try:
+        humidity = float(humidity)
+        temperature = float(temperature)
+        hours_of_light = int(hours_of_light)
+    except ValueError:
+        return jsonify({'error': 'Invalid data types'}), 400
+
+    # Insert the data into the database with explicit transaction management
+    with engine.begin() as connection:  # Automatically commits at the end of the block
+        try:
+            connection.execute(text("""
+                INSERT INTO SensorReadings (sensor_type, value)
+                VALUES ('light_status', :light_status)
+            """), {'light_status': light_status})
+
+            connection.execute(text("""
+                INSERT INTO SensorReadings (sensor_type, value)
+                VALUES ('hours_of_light', :hours_of_light)
+            """), {'hours_of_light': hours_of_light})
+
+            connection.execute(text("""
+                INSERT INTO SensorReadings (sensor_type, value)
+                VALUES ('pump_status', :pump_status)
+            """), {'pump_status': pump_status})
+
+            connection.execute(text("""
+                INSERT INTO SensorReadings (sensor_type, value)
+                VALUES ('humidity', :humidity)
+            """), {'humidity': humidity})
+
+            connection.execute(text("""
+                INSERT INTO SensorReadings (sensor_type, value)
+                VALUES ('temperature', :temperature)
+            """), {'temperature': temperature})
+
+        except Exception as e:
+            print(f"Error while inserting data: {str(e)}")  # Log the error to the console
+            return jsonify({'error': str(e)}), 500
 
     return jsonify({'message': 'Data added successfully'}), 201
 
+
+@app.route('/', methods=['Get'])
+def home():
+    return "index python backend"
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')

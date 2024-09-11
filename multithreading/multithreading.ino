@@ -12,7 +12,8 @@ using namespace std::literals::chrono_literals;
 #include <WiFi.h>
 char ssid[] = "luca";        // your network SSID (name)
 char pass[] = "87654321";
-char server[] = "http://192.168.90.62:3000/api/sensor_data'";
+char server[] = "192.168.90.62";
+
 WiFiClient client;
 String apiKey = "bruh_bruh_greenhouse"; // Define your API key here
 
@@ -26,7 +27,7 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
 #define FAN_PIN 4
 #define TEMPERATURE_THRESHOLD 27.00
-#define AIR_HUMIDITY_THRESHOLD 2.00
+#define AIR_HUMIDITY_THRESHOLD 65.00
 #define BUFFER 2.00
 
 #define SCREEN_WIDTH 128
@@ -58,6 +59,7 @@ Thread pump_thread;
 Thread light_sensor_thread;  // New thread for light sensor functionality
 Thread temperature_thread;
 Thread display_thread;
+Thread wifi_thread;
 
 // Variables for water pump/humidity
 float previousAverageSoilHumidity = 0;
@@ -285,52 +287,8 @@ void temperature_loop() {
 }
 
 // ------------------------------------------------
-// DISPLAY & WiFi
+// DISPLAY
 // ------------------------------------------------
-
-void send_to_server(String lightStatus, String hoursOfLight, String pumpStatus, String humidity, String temperature, String apiKey) {
-  // If connected to WiFi
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("Sending data to server...");
-
-    // Start connection to server
-    if (client.connect(server, 80)) {
-      Serial.println("Connected to server");
-
-      // Construct the POST data
-      String postData = "light_status=" + lightStatus + "&hours_of_light=" + hoursOfLight + 
-                        "&pump_status=" + pumpStatus + "&humidity=" + humidity + "&temperature=" + temperature;
-
-      // Send HTTP request
-      client.println("POST /api/sensor_data HTTP/1.1");
-      client.println("Host: " + String(server));
-      client.println("Content-Type: application/x-www-form-urlencoded");
-      client.println("API-Key: " + apiKey); // Add the API key as a custom header
-      client.println("Connection: close");
-      client.print("Content-Length: ");
-      client.println(postData.length());
-      client.println();
-      client.println(postData);
-
-      // Wait for response from the server
-      while (client.connected()) {
-        while (client.available()) {
-          char c = client.read();
-          Serial.write(c);  // Display server response
-        }
-      }
-
-      // Close the connection
-      client.stop();
-      Serial.println("Data sent and connection closed");
-    } else {
-      Serial.println("Failed to connect to server");
-    }
-  } else {
-    Serial.println("WiFi not connected");
-  }
-}
-
 
 void display_loop() {
   while (1) {
@@ -406,14 +364,70 @@ void display_loop() {
     display.print(line1);
     display.display();
 
-    send_to_server(lightStatus, String(hoursWithLight), pumpStatus, humidity, temperature);
-
     if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
     bus_i2c.release();
   }
 }
 
 
+// ------------------------------------------------
+// WiFi
+// ------------------------------------------------
+
+void send_to_server(String lightStatus, String hoursOfLight, String pumpStatus, String humidity, String temperature, String apiKey) {
+  // If connected to WiFi
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Sending data to server...");
+
+    // Start connection to server
+    if (client.connect(server, 80)) {
+      Serial.println("Connected to server");
+
+      // Construct the POST data
+      String postData = "light_status=" + lightStatus + "&hours_of_light=" + hoursOfLight + 
+                        "&pump_status=" + pumpStatus + "&humidity=" + humidity + "&temperature=" + temperature;
+
+      // Send HTTP request
+      client.println("POST /api/sensor_data HTTP/1.1");
+      client.println("Host: " + String(server));
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.println("API-Key: " + apiKey); // Add the API key as a custom header
+      client.println("Connection: close");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.println(postData);
+
+      // Wait for response from the server
+      while (client.connected()) {
+        while (client.available()) {
+          char c = client.read();
+          Serial.write(c);  // Display server response
+        }
+      }
+
+      // Close the connection
+      client.stop();
+      Serial.println("Data sent and connection closed");
+    } else {
+      Serial.println("Failed to connect to server");
+    }
+  } else {
+    Serial.println("WiFi not connected");
+  }
+}
+void wifi_loop() {
+  while (1) {
+
+    send_to_server(String(brightness), String(hoursWithLight), "pumpStatus", String(averageSoilHumidity), String(temperature), apiKey);  // Sending data to server
+    ThisThread::sleep_for(1800000);
+
+  }
+}
+
+// ------------------------------------------------
+// Setup
+// ------------------------------------------------
 void setup() {
   Serial.begin(9600);
 
@@ -478,6 +492,7 @@ void setup() {
   light_sensor_thread.start(light_sensor_loop);
   temperature_thread.start(temperature_loop);
   display_thread.start(display_loop);
+  wifi_thread.start(wifi_loop);
 }
 
 
