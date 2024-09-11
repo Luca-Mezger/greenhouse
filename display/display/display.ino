@@ -40,7 +40,7 @@ float differenceAverageSoilHumidity[HUMIDITY_MOISTURE_AVERAGE_ELEMENTS];
 int endTime = 0;
 int head = 0;   // Keeps track of the next position to insert the new element
 int count = 0;  // Keeps track of the number of elements added
-bool isPumping = false;
+bool lowWater = false;
 float averageSoilHumidity;
 
 // Variables for light sensor
@@ -117,12 +117,11 @@ void onLowSoilMoisture() {
 }
 
 void onNoWaterEffect() {
-  // Serial.println("watertank empty");
+  lowWater = true;
 }
 
 void pump_loop() {
   while (1) {
-    isPumping = true;
     averageSoilHumidity = get_average_soil_humidity();
 
     if (averageSoilHumidity < SOIL_MOISTURE_THRESHOLD) {
@@ -145,9 +144,10 @@ void pump_loop() {
       delay(360000);
       float humidityAfterWatering = get_average_soil_humidity();
 
-
       if (humidityAfterWatering - humidityBeforeWatering <= 1.5) {
         onNoWaterEffect();
+      } else {
+        lowWater = false;
       }
 
       endTime = millis() - currentTime;
@@ -157,7 +157,6 @@ void pump_loop() {
       delay((HOUR - endTime));
     }
     endTime = 0;
-    isPumping = false;
   }
 }
 
@@ -318,6 +317,10 @@ void loop() {
     paddedString += " ";
   }
 
+  if (paddedString == "") {
+    paddedString = "  ";
+  }
+
 
   String line2_end = "Hours of Light: " + String(hoursWithLight);
   String line2 = line2_start + paddedString + line2_end;
@@ -331,10 +334,10 @@ void loop() {
 
   String line3 = "Pump status: ";
 
-  if (isPumping) {
-    line3 = "Pump status: is pumping";
+  if (lowWater) {
+    line3 = "NO WATER IN TANK! REFILL!";
   } else {
-    line3 = "Pump status: " + String((HOUR - endTime) / 60000) + "min left until next pump";
+    line3 = "";
   }
 
 
