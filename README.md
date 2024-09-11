@@ -24,8 +24,8 @@ The goal for this project week was to make a fully functioning automated greenho
 - [x] Detection Water Supply (empty or not)
 - [x] Temperature Sensor/Fan
 - [x] Multithreading
-- [ ] Air Humidity
-- [ ] Build Greenhouse
+- [x] Air Humidity
+- [x] Build Greenhouse
 - [x] Display
 - [ ] WebApp
 - [ ] Poster (Fritzing)
