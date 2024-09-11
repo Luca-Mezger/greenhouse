@@ -261,7 +261,6 @@ void temperature_loop() {
     temperature = htu.readTemperature();  //in Degree Celcius
     rel_hum = htu.readHumidity();
     bus_i2c.release();
-    Serial.println(rel_hum);
 
     if (temperature > TEMPERATURE_THRESHOLD) {
       digitalWrite(FAN_PIN, LOW);  // Turn fan on
@@ -397,8 +396,8 @@ void setup() {
 
   // Initial humidity and light measurements
   averageSoilHumidity = get_average_soil_humidity();
-  Serial.println("test");
-  Serial.println(averageSoilHumidity);
+  //Serial.println("test");
+  //Serial.println(averageSoilHumidity);
   lux = lightMeter.readLightLevel();
   brightness = calculateBrightnessFromLux(lux);
 
