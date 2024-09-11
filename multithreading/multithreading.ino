@@ -17,6 +17,7 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
 #define FAN_PIN 4
 #define TEMPERATURE_THRESHOLD 27.00
+#define AIR_HUMIDITY_THRESHOLD 65.00
 #define BUFFER 2.00
 
 #define SCREEN_WIDTH 128
@@ -71,6 +72,7 @@ float lux;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 float temperature;
+float rel_hum;
 
 int x_coord_display, min_x_coord_display;
 
@@ -221,7 +223,7 @@ void light_sensor_loop() {
       for (int i = 0; i < 24; i++) {
         if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
           hoursWithLight++;
-        } 
+        }
       }
 
       // Determine if the LED needs to be turned on for additional light
@@ -250,11 +252,18 @@ void light_sensor_loop() {
 void temperature_loop() {
   while (1) {
     temperature = htu.readTemperature();  //in Degree Celcius
+    rel_hum = htu.readHumidity();
     //Serial.println(temperature);
 
     if (temperature > TEMPERATURE_THRESHOLD) {
       digitalWrite(FAN_PIN, LOW);  // Turn fan on
     } else if (temperature < TEMPERATURE_THRESHOLD - BUFFER) {
+      digitalWrite(FAN_PIN, HIGH);  // Turn fan off
+    }
+
+    if (rel_hum > AIR_HUMIDITY_THRESHOLD) {
+      digitalWrite(FAN_PIN, LOW);  // Turn fan on
+    } else if (rel_hum < AIR_HUMIDITY_THRESHOLD - BUFFER) {
       digitalWrite(FAN_PIN, HIGH);  // Turn fan off
     }
 
@@ -268,79 +277,80 @@ void temperature_loop() {
 
 void display_loop() {
   while (1) {
-      if (lowWater) {
-    display.setTextColor(BLACK, WHITE);
-  } else {
-    display.setTextColor(WHITE, BLACK);
+    if (lowWater) {
+      display.setTextColor(BLACK, WHITE);
+    } else {
+      display.setTextColor(WHITE, BLACK);
+    }
+
+    String line2_start = "Light status: ";
+    if (brightness > 50) {
+
+      line2_start = "Light status: lit";
+    } else {
+
+      line2_start = "Light status: dark times";
+    }
+
+    int charWidth = 6;                                    // Adjust this depending on your font size
+    int maxChars = display.width() / charWidth;           // Calculate how many characters fit on the display
+    int paddingSpaces = maxChars - line2_start.length();  // Calculate how many spaces you need
+
+    // Create a string with the right amount of padding
+    String paddedString;
+    for (int i = 0; i < paddingSpaces; i++) {
+      paddedString += " ";
+    }
+
+    if (paddedString == "") {
+      paddedString = "  ";
+    }
+
+
+    String line2_end = "Hours of Light: " + String(hoursWithLight);
+    String line2 = line2_start + paddedString + line2_end;
+
+    min_x_coord_display = -6 * line2.length();
+
+    display.clearDisplay();
+    display.setCursor(x_coord_display, 10);
+    display.print(line2);
+
+    String line3 = "Pump status: ";
+
+    if (lowWater) {
+      line3 = "NO WATER IN TANK! REFILL!";
+    } else {
+      line3 = "";
+    }
+
+
+    display.setCursor(x_coord_display, 20);
+    display.print(line3);
+
+
+    String line1_start = "Humidity " + String(averageSoilHumidity) + "%";
+
+
+    paddingSpaces = maxChars - line1_start.length();  // Calculate how many spaces you need
+
+    // Create a string with the right amount of padding
+    paddedString = "";
+    for (int i = 0; i < paddingSpaces; i++) {
+      paddedString += " ";
+    }
+
+
+    String line1_end = String(temperature) + "°C";
+    String line1 = line1_start + paddedString + line1_end;
+
+    display.setCursor(x_coord_display, 0);
+    display.print(line1);
+    display.display();
+
+    if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
   }
-
-  String line2_start = "Light status: ";
-  if (brightness > 50) {
-
-    line2_start = "Light status: lit";
-  } else {
-
-    line2_start = "Light status: dark times";
-  }
-
-  int charWidth = 6;                                    // Adjust this depending on your font size
-  int maxChars = display.width() / charWidth;           // Calculate how many characters fit on the display
-  int paddingSpaces = maxChars - line2_start.length();  // Calculate how many spaces you need
-
-  // Create a string with the right amount of padding
-  String paddedString;
-  for (int i = 0; i < paddingSpaces; i++) {
-    paddedString += " ";
-  }
-
-  if (paddedString == "") {
-    paddedString = "  ";
-  }
-
-
-  String line2_end = "Hours of Light: " + String(hoursWithLight);
-  String line2 = line2_start + paddedString + line2_end;
-
-  min_x_coord_display = -6 * line2.length();
-
-  display.clearDisplay();
-  display.setCursor(x_coord_display, 10);
-  display.print(line2);
-
-  String line3 = "Pump status: ";
-
-  if (lowWater) {
-    line3 = "NO WATER IN TANK! REFILL!";
-  } else {
-    line3 = "";
-  }
-
-
-  display.setCursor(x_coord_display, 20);
-  display.print(line3);
-
-
-  String line1_start = "Humidity " + String(averageSoilHumidity) + "%";
-
-
-  paddingSpaces = maxChars - line1_start.length();  // Calculate how many spaces you need
-
-  // Create a string with the right amount of padding
-  paddedString = "";
-  for (int i = 0; i < paddingSpaces; i++) {
-    paddedString += " ";
-  }
-
-
-  String line1_end = String(temperature) + "°C";
-  String line1 = line1_start + paddedString + line1_end;
-
-  display.setCursor(x_coord_display, 0);
-  display.print(line1);
-  display.display();
-
-  if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
-}}
+}
 
 
 void setup() {
@@ -376,12 +386,12 @@ void setup() {
       ;
   }
 
-    // Initial humidity and light measurements
-  averageSoilHumidity = get_average_soil_humidity();  
+  // Initial humidity and light measurements
+  averageSoilHumidity = get_average_soil_humidity();
   Serial.println("test");
   Serial.println(averageSoilHumidity);
-  lux = lightMeter.readLightLevel();           
-  brightness = calculateBrightnessFromLux(lux); 
+  lux = lightMeter.readLightLevel();
+  brightness = calculateBrightnessFromLux(lux);
 
   // Display
   display.begin(SSD1306_SWITCHCAPVCC);
