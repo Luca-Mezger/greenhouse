@@ -1,4 +1,4 @@
-#define SOIL_HUMIDITY_PIN A0
+#define SOIL_HUMIDITY_PIN A1
 #define RELATIVE_SOIL_HUMIDITY_UPPER_LIMIT 699
 #define RELATIVE_SOIL_HUMIDITY_LOWER_LIMIT 363
 #define RELATIVE_SOIL_HUMIDITY_A -0.29761 //a and b for linear regression to map Resistance of Soil Moisture reader to percentage

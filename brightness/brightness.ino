@@ -3,12 +3,12 @@
 #include "GravityRtc.h"
 #include "Wire.h"
 
-#define HOUR_DURATION 3600000  // 1 hour in milliseconds
+#define HOUR_DURATION 10000  // 1 hour in milliseconds
 
 #define MIN_BRIGHTNESS 6
 #define MAX_BRIGHTNESS 4097
-#define LIGHT_THRESHOLD_HOURS 8
-#define LED_PIN D10
+#define LIGHT_THRESHOLD_HOURS 10
+#define LED_PIN D3
 #define THRESHOLD_PERCENTAGE 50  // Brightness percentage threshold
 
 Nano33BLEColourData colourData;

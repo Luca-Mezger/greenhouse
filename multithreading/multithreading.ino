@@ -1,19 +1,25 @@
 #include <mbed.h>
-#include "Nano33BLEColour.h"
 #include "GravityRtc.h"
 #include "Wire.h"
 using namespace mbed;
 using namespace rtos;
 using namespace std::literals::chrono_literals;
+#include "Adafruit_HTU21DF.h"
+#include <BH1750.h>
 
-#include <Arduino_HTS221.h>
 
-#define FAN_PIN D4
+
+BH1750 lightMeter;
+
+//temp & air humidity
+Adafruit_HTU21DF htu = Adafruit_HTU21DF();
+
+#define FAN_PIN 4
 #define TEMPERATURE_THRESHOLD 27.00
 #define BUFFER 2.00
 
 
-#define SOIL_HUMIDITY_PIN A0
+#define SOIL_HUMIDITY_PIN A1
 #define RELATIVE_SOIL_HUMIDITY_UPPER_LIMIT 699
 #define RELATIVE_SOIL_HUMIDITY_LOWER_LIMIT 363
 #define RELATIVE_SOIL_HUMIDITY_A -0.29761  // a and b for linear regression to map Resistance of Soil Moisture reader to percentage
@@ -23,20 +29,21 @@ using namespace std::literals::chrono_literals;
 #define DELAY_TIME_PUMP 2000
 #define DELAY_TIME_STABILIZING_ARRAY 10000
 #define HOUR 3600000
-#define PUMP D11
-#define LED_PIN D10
+#define PUMP 2
+#define LED_PIN 3
 #define SOIL_MOISTURE_THRESHOLD 35
 #define HUMIDITY_MOISTURE_AVERAGE_ELEMENTS 9
 
 #define HOUR_DURATION 3600000  // 1 hour in milliseconds
-#define MIN_BRIGHTNESS 6
-#define MAX_BRIGHTNESS 4097
+
+#define MIN_BRIGHTNESS 0
+#define MAX_BRIGHTNESS 40000
 #define LIGHT_THRESHOLD_HOURS 8
 #define THRESHOLD_PERCENTAGE 50  // Brightness percentage threshold
 
 Thread pump_thread;
 Thread light_sensor_thread;  // New thread for light sensor functionality
-Thread temperature_thread;¨
+Thread temperature_thread;
 
 // Variables for water pump/humidity
 float previousAverageSoilHumidity = 0;
@@ -46,7 +53,6 @@ int head = 0;   // Keeps track of the next position to insert the new element
 int count = 0;  // Keeps track of the number of elements added
 
 // Variables for light sensor
-Nano33BLEColourData colourData;
 GravityRtc rtc;
 float brightnessHistory[24];
 int hoursWithLight = 0;
@@ -114,7 +120,7 @@ void onLowSoilMoisture() {
 }
 
 void onNoWaterEffect() {
-    Serial.println("watertank empty");
+    //Serial.println("watertank empty");
 }
 
 void pump_loop() {
@@ -160,73 +166,64 @@ void pump_loop() {
 // LIGHT SENSOR
 // ------------------------------------------------
 
-float calculateBrightness(int r, int g, int b) {
-  float brightness = (r + g + b) / 3.0;
-  brightness = clip(brightness, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+
+float calculateBrightnessFromLux(float lux) {
+  float brightness = clip(lux, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
   return ((brightness - MIN_BRIGHTNESS) / (MAX_BRIGHTNESS - MIN_BRIGHTNESS)) * 100;
 }
 
+
 void light_sensor_loop() {
-    rtc.setup();
-    rtc.adjustRtc(F(__DATE__), F(__TIME__));
-    Colour.begin();
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);  // Initially light is off
-
     while (1) {
-        rtc.read();
+        // Read light level from BH1750 sensor
+        float lux = lightMeter.readLightLevel();
+        float brightness = calculateBrightnessFromLux(lux);
 
-        if (Colour.pop(colourData)) {
-            float brightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
-            hourlyBrightnessAccumulator += brightness;
-            brightnessReadingsCount++;
+        Serial.println(lux);
+        // Accumulate brightness values for the hour
+        hourlyBrightnessAccumulator += brightness;
+        brightnessReadingsCount++;
 
-            // Perform hourly check
-            if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
-                float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
+        // Perform hourly check
+        if (brightnessReadingsCount >= (HOUR_DURATION / 10000)) {
+            float averageBrightnessForHour = hourlyBrightnessAccumulator / brightnessReadingsCount;
 
-                // shift brightness history and store the current hour's average brightness
-                for (int i = 1; i < 24; i++) {
-                    brightnessHistory[i - 1] = brightnessHistory[i];
-                }
-                brightnessHistory[23] = averageBrightnessForHour;
+            // Shift brightness history and store the current hour's average brightness
+            for (int i = 1; i < 24; i++) {
+                brightnessHistory[i - 1] = brightnessHistory[i];
+            }
+            brightnessHistory[23] = averageBrightnessForHour;
 
-                // Reset
-                hourlyBrightnessAccumulator = 0;
-                brightnessReadingsCount = 0;
+            // Reset hourly accumulator
+            hourlyBrightnessAccumulator = 0;
+            brightnessReadingsCount = 0;
 
-                // count: hours with sufficient light
-                hoursWithLight = 0;
-                for (int i = 0; i < 24; i++) {
-                    if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
-                        hoursWithLight++;
-                    }
-                }
-
-                int remainingHours = 24 - rtc.hour;
-
-                // If there havent been enough light hours and remaining hours are insufficient
-                if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
-                    int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
-
-                    float currentBrightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
-                    
-                    // Only turn on the LED if external light is below 50%
-                    if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
-                        digitalWrite(LED_PIN, LOW);  // Turn on the LED 
-                        //Serial.println("Light on!!!");
-                    } else {
-                        digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
-                    }
-                } else {
-                    digitalWrite(LED_PIN, HIGH);  // Turn off the LED if enough litght
+            // Count the hours with sufficient light
+            hoursWithLight = 0;
+            for (int i = 0; i < 24; i++) {
+                if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+                    hoursWithLight++;
                 }
             }
 
-            ThisThread::sleep_for(10000);  // Sleep for 10 seconds
+            // Determine if the LED needs to be turned on for additional light
+            int remainingHours = 24 - rtc.hour;
+            if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+                int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+                if (remainingHours <= requiredLightHours && brightness < THRESHOLD_PERCENTAGE) {
+                    digitalWrite(LED_PIN, HIGH);  // Turn on the LED
+                } else {
+                    digitalWrite(LED_PIN, LOW);  // Turn off the LED
+                }
+            } else {
+                digitalWrite(LED_PIN, LOW);  // Turn off the LED if sufficient light
+            }
         }
+
+        ThisThread::sleep_for(10000);  // Sleep for 10 seconds
     }
 }
+
 
 
 // ------------------------------------------------
@@ -234,8 +231,8 @@ void light_sensor_loop() {
 // ------------------------------------------------
 void temperature_loop() {
   while (1) {
-    float temperature = HTS.readTemperature();
-    Serial.println(temperature);
+    float temperature = htu.readTemperature(); //in Degree Celcius
+    //Serial.println(temperature);
 
     if (temperature > TEMPERATURE_THRESHOLD) {
       digitalWrite(FAN_PIN, LOW);  // Turn fan on
@@ -249,19 +246,26 @@ void temperature_loop() {
 
 void setup() {
   Serial.begin(9600);
+
+  // for light sensor
+  Wire.begin();
+  lightMeter.begin();
+  
   
   // Initialize fan pin
   pinMode(FAN_PIN, OUTPUT);
   digitalWrite(FAN_PIN, HIGH);  // Start with fan off
   
-  // Initialize temperature sensor
-  if (!HTS.begin()) {
-    Serial.println("Failed to initialize humidity temperature sensor!");
-    while (1);
-  }
+
 
   for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
     differenceAverageSoilHumidity[i] = 0;
+  }
+
+    //Temperature
+    if (!htu.begin()) {
+    Serial.println("Couldn't find sensor!");
+    while (1);
   }
 
   pump_thread.start(pump_loop);
