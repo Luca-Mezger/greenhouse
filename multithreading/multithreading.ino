@@ -28,7 +28,7 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 #define RELATIVE_SOIL_HUMIDITY_A -0.29761  // a and b for linear regression to map Resistance of Soil Moisture reader to percentage
 #define RELATIVE_SOIL_HUMIDITY_B 208.0357
 #define STABILIZATION_THRESHOLD 0.5  // threshold for detecting stabilization
-#define DELAY_TIME_AVERAGES 10
+#define DELAY_TIME_AVERAGES 1
 #define DELAY_TIME_PUMP 2000
 #define DELAY_TIME_STABILIZING_ARRAY 10000
 #define HOUR 3600000
@@ -66,6 +66,7 @@ float hourlyBrightnessAccumulator = 0;
 int brightnessReadingsCount = 0;
 bool isGettingLight = false;
 float brightness;
+float lux;
 //Display decalration
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
@@ -94,7 +95,7 @@ float calculate_relative_soil_humidity(float measurement, float a = RELATIVE_SOI
   return a * clipped_measurement + b;
 }
 
-float get_average_soil_humidity(int numReadings = 10000) {
+float get_average_soil_humidity(int numReadings = 1000) {
   float totalSoilHumidity = 0;
   for (int i = 0; i < numReadings; i++) {
     int sensorValue = analogRead(SOIL_HUMIDITY_PIN);
@@ -369,6 +370,13 @@ void setup() {
       ;
   }
 
+    // Initial humidity and light measurements
+  averageSoilHumidity = get_average_soil_humidity();  
+  Serial.println("test");
+  Serial.println(averageSoilHumidity);
+  lux = lightMeter.readLightLevel();           
+  brightness = calculateBrightnessFromLux(lux); 
+
   // Display
   display.begin(SSD1306_SWITCHCAPVCC);
   display.setTextSize(1);
@@ -380,11 +388,6 @@ void setup() {
   light_sensor_thread.start(light_sensor_loop);
   temperature_thread.start(temperature_loop);
   display_thread.start(display_loop);
-
-  // Initial humidity and light measurements
-  averageSoilHumidity = get_average_soil_humidity();  
-  float lux = lightMeter.readLightLevel();           
-  float brightness = calculateBrightnessFromLux(lux); 
 }
 
 
