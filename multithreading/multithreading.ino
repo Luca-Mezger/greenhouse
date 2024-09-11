@@ -268,6 +268,12 @@ void temperature_loop() {
 
 void display_loop() {
   while (1) {
+      if (lowWater) {
+    display.setTextColor(BLACK, WHITE);
+  } else {
+    display.setTextColor(WHITE, BLACK);
+  }
+
   String line2_start = "Light status: ";
   if (brightness > 50) {
 

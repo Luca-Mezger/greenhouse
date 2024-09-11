@@ -298,6 +298,14 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  lowWater = false;
+
+  if (lowWater) {
+    display.setTextColor(BLACK, WHITE);
+  } else {
+    display.setTextColor(WHITE, BLACK);
+  }
+
   String line2_start = "Light status: ";
   if (isGettingLight) {
 
@@ -330,7 +338,6 @@ void loop() {
   display.clearDisplay();
   display.setCursor(x_coord_display, 10);
   display.print(line2);
-  display.display();
 
   String line3 = "Pump status: ";
 
@@ -343,7 +350,6 @@ void loop() {
 
   display.setCursor(x_coord_display, 20);
   display.print(line3);
-  display.display();
 
 
   String line1_start = "Humidity " + String(averageSoilHumidity) + "%";
