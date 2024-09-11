@@ -27,7 +27,7 @@ The goal for this project week was to make a fully functioning automated greenho
 - [ ] Air Humidity
 - [ ] Build Greenhouse
 - [x] Display
-- [ ] Smartphone Connection
+- [ ] WebApp
 - [ ] Poster (Fritzing)
 - [ ] Report
 
