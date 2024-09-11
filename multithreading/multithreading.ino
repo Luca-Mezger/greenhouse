@@ -1,7 +1,7 @@
 #include <mbed.h>
 #include "GravityRtc.h"
 #include "Wire.h"
-using namespace mbed;
+using namespace arduino;
 using namespace rtos;
 using namespace std::literals::chrono_literals;
 #include "Adafruit_HTU21DF.h"
@@ -179,7 +179,7 @@ void light_sensor_loop() {
         float lux = lightMeter.readLightLevel();
         float brightness = calculateBrightnessFromLux(lux);
 
-        Serial.println(lux);
+        //Serial.println(lux);
         // Accumulate brightness values for the hour
         hourlyBrightnessAccumulator += brightness;
         brightnessReadingsCount++;
