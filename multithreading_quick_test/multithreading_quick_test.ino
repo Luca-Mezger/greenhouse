@@ -26,7 +26,7 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
 #define FAN_PIN 4
 #define TEMPERATURE_THRESHOLD 27.00
-#define AIR_HUMIDITY_THRESHOLD 2.00
+#define AIR_HUMIDITY_THRESHOLD 65.00
 #define BUFFER 2.00
 
 #define SCREEN_WIDTH 128
@@ -40,14 +40,14 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 #define STABILIZATION_THRESHOLD 0.5  // threshold for detecting stabilization
 #define DELAY_TIME_AVERAGES 1
 #define DELAY_TIME_PUMP 2000
-#define DELAY_TIME_STABILIZING_ARRAY 10000
-#define HOUR 3600000
+#define DELAY_TIME_STABILIZING_ARRAY 1
+#define HOUR 30000
 #define PUMP 2
 #define LED_PIN 3
-#define SOIL_MOISTURE_THRESHOLD 35
+#define SOIL_MOISTURE_THRESHOLD 50
 #define HUMIDITY_MOISTURE_AVERAGE_ELEMENTS 9
 
-#define HOUR_DURATION 3600000  // 1 hour in milliseconds
+#define HOUR_DURATION 30000  // 1 hour in milliseconds
 
 #define MIN_BRIGHTNESS 0
 #define MAX_BRIGHTNESS 40000
@@ -171,7 +171,7 @@ void pump_loop() {
       }
 
       // Wait for 10 minutes after watering to check humidity again
-      ThisThread::sleep_for(10min);
+      ThisThread::sleep_for(10);
       float humidityAfterWatering = get_average_soil_humidity();
 
 
@@ -280,7 +280,7 @@ void temperature_loop() {
       digitalWrite(FAN_PIN, HIGH);  // Turn fan off
     }
 
-    ThisThread::sleep_for(1800000);  //30min
+    ThisThread::sleep_for(15000);  //30min
   }
 }
 
@@ -406,7 +406,7 @@ void display_loop() {
     display.print(line1);
     display.display();
 
-    send_to_server(lightStatus, String(hoursWithLight), pumpStatus, humidity, temperature);
+    //send_to_server(lightStatus, String(hoursWithLight), pumpStatus, humidity, temperature);
 
     if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
     bus_i2c.release();
