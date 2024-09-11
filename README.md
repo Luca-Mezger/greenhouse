@@ -14,6 +14,7 @@ The goal for this project week was to make a fully functioning automated greenho
 - 1x Pump
 - 1x Fan
 - 1x 5V PSU
+- 1x Laptop or other device to run server backend for the webapp
 
 ## Todo
 - [x] Light detection
