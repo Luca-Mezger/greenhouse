@@ -203,6 +203,32 @@ void light_sensor_loop() {
             for (int i = 0; i < 24; i++) {
                 if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
                     hoursWithLight++;
+
+                // count: hours with sufficient light
+                hoursWithLight = 0;
+                for (int i = 0; i < 24; i++) {
+                    if (brightnessHistory[i] > THRESHOLD_PERCENTAGE) {
+                        hoursWithLight++;
+                    }
+                }
+
+                int remainingHours = 24 - rtc.hour;
+
+                // If there havent been enough light hours and remaining hours are insufficient
+                if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
+                    int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
+
+                    float currentBrightness = calculateBrightness(colourData.r, colourData.g, colourData.b);
+                    
+                    // Only turn on the LED if external light is below 50%
+                    if (remainingHours <= requiredLightHours && currentBrightness < THRESHOLD_PERCENTAGE) {
+                        digitalWrite(LED_PIN, LOW);  // Turn on the LED 
+                        // Serial.println("Light on!!!");
+                    } else {
+                        digitalWrite(LED_PIN, HIGH);  //turn off if remaining time is enough
+                    }
+                } else {
+                    digitalWrite(LED_PIN, HIGH);  // Turn off the LED if enough litght
                 }
             }
 
@@ -245,18 +271,22 @@ void temperature_loop() {
 }
 
 void setup() {
+
   Serial.begin(9600);
 
   // for light sensor
   Wire.begin();
   lightMeter.begin();
   
-  
   // Initialize fan pin
   pinMode(FAN_PIN, OUTPUT);
   digitalWrite(FAN_PIN, HIGH);  // Start with fan off
-  
 
+  // Initialize temperature sensor
+  if (!HTS.begin()) {
+    // Serial.println("Failed to initialize humidity temperature sensor!");
+    while (1);
+  }
 
   for (int i = 0; i < HUMIDITY_MOISTURE_AVERAGE_ELEMENTS; i++) {
     differenceAverageSoilHumidity[i] = 0;

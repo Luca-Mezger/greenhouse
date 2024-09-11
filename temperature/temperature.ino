@@ -16,7 +16,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  float temperature = HTS.readTemperature()
+  float temperature = HTS.readTemperature();
 
   Serial.println(temperature);
   if (temperature > TEMPERATURE_THRESHOLD) {

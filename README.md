@@ -1,5 +1,7 @@
 # Automatic Greenhouse
-
+Schweizer Jugend Forscht - Coding Camp   
+Advised by Alberto Ferrante - USI Departement CS   
+   
 The goal for this project week was to make a fully functioning automated greenhouse, where all funtions that would need manual work, would be able to be done by the greenhouse.
 
 ## Hardware
@@ -21,6 +23,7 @@ The goal for this project week was to make a fully functioning automated greenho
 - [x] Detection Water Supply (empty or not)
 - [x] Temperature Sensor/Fan
 - [x] Multithreading
+- [ ] Air Humidity
 - [ ] Build Greenhouse
 - [ ] Display
 - [ ] Smartphone Connection
@@ -92,6 +95,7 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
   }
   endTime = 0;
 ```
+---
 
 #### LED Logic
 - Initializes color sensor and RTC.
@@ -140,6 +144,7 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
         delay(1000);  // Delay for 1 second for each sensor reading
     }
 ```
+---
 
 #### Temperature Logic
 
@@ -157,5 +162,9 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
   }
   delay(1800000);
 ```
+---
 
 #### Display Logic
+
+- Take the variables needed to display
+- Clear the screen after awhile and change information displayed
