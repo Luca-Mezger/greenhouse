@@ -65,6 +65,8 @@ int hoursWithLight = 0;
 float hourlyBrightnessAccumulator = 0;
 int brightnessReadingsCount = 0;
 bool isGettingLight = false;
+//Display decalration
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 float temperature;
 
@@ -266,6 +268,7 @@ void temperature_loop() {
 // ------------------------------------------------
 
 void display_loop() {
+  while (1) {
   String line2_start = "Light status: ";
   if (isGettingLight) {
 
@@ -298,7 +301,6 @@ void display_loop() {
   display.clearDisplay();
   display.setCursor(x_coord_display, 10);
   display.print(line2);
-  display.display();
 
   String line3 = "Pump status: ";
 
@@ -311,7 +313,6 @@ void display_loop() {
 
   display.setCursor(x_coord_display, 20);
   display.print(line3);
-  display.display();
 
 
   String line1_start = "Humidity " + String(averageSoilHumidity) + "%";
@@ -334,7 +335,7 @@ void display_loop() {
   display.display();
 
   if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
-}
+}}
 
 
 void setup() {
@@ -381,7 +382,13 @@ void setup() {
   light_sensor_thread.start(light_sensor_loop);
   temperature_thread.start(temperature_loop);
   display_thread.start(display_loop);
+
+  // Initial humidity and light measurements
+  averageSoilHumidity = get_average_soil_humidity();  
+  float lux = lightMeter.readLightLevel();           
+  float brightness = calculateBrightnessFromLux(lux); 
 }
+
 
 
 void loop() {
