@@ -19,7 +19,7 @@
         const formattedEndDate = format(new Date(endDate), "yyyy-MM-dd HH:mm:ss");
 
         const response = await fetch(
-            `${API_URL}/api/sensor_data?sensor_type=${sensorType}&start_date=${formattedStartDate}&end_date=${formattedEndDate}`
+            `${API_URL}/api_data?sensor_type=${sensorType}&start_date=${formattedStartDate}&end_date=${formattedEndDate}`
         );
 
         if (response.ok) {

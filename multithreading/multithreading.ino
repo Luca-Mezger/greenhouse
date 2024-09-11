@@ -8,6 +8,13 @@ using namespace std::literals::chrono_literals;
 #include <BH1750.h>
 #include <Adafruit_SSD1306.h>
 
+//wifi
+#include <WiFi.h>
+char ssid[] = "luca";        // your network SSID (name)
+char pass[] = "87654321";
+char server[] = "http://192.168.90.62:3000/api/sensor_data'";
+WiFiClient client;
+String apiKey = "bruh_bruh_greenhouse"; // Define your API key here
 
 
 BH1750 lightMeter;
@@ -17,7 +24,7 @@ Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
 #define FAN_PIN 4
 #define TEMPERATURE_THRESHOLD 27.00
-#define AIR_HUMIDITY_THRESHOLD 65.00
+#define AIR_HUMIDITY_THRESHOLD 2.00
 #define BUFFER 2.00
 
 #define SCREEN_WIDTH 128
@@ -262,18 +269,62 @@ void temperature_loop() {
     }
 
     if (rel_hum > AIR_HUMIDITY_THRESHOLD) {
-      digitalWrite(FAN_PIN, LOW);  // Turn fan on
+      digitalWrite(FAN_PIN, HIGH);  // Turn fan on
     } else if (rel_hum < AIR_HUMIDITY_THRESHOLD - BUFFER) {
-      digitalWrite(FAN_PIN, HIGH);  // Turn fan off
+      digitalWrite(FAN_PIN, LOW);  // Turn fan off
     }
 
-    ThisThread::sleep_for(1800000);  //30min
+    ThisThread::sleep_for(0);  //30min
   }
 }
 
 // ------------------------------------------------
-// DISPLAY
+// DISPLAY & WiFi
 // ------------------------------------------------
+
+void send_to_server(String lightStatus, String hoursOfLight, String pumpStatus, String humidity, String temperature, String apiKey) {
+  // If connected to WiFi
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Sending data to server...");
+
+    // Start connection to server
+    if (client.connect(server, 80)) {
+      Serial.println("Connected to server");
+
+      // Construct the POST data
+      String postData = "light_status=" + lightStatus + "&hours_of_light=" + hoursOfLight + 
+                        "&pump_status=" + pumpStatus + "&humidity=" + humidity + "&temperature=" + temperature;
+
+      // Send HTTP request
+      client.println("POST /api/sensor_data HTTP/1.1");
+      client.println("Host: " + String(server));
+      client.println("Content-Type: application/x-www-form-urlencoded");
+      client.println("API-Key: " + apiKey); // Add the API key as a custom header
+      client.println("Connection: close");
+      client.print("Content-Length: ");
+      client.println(postData.length());
+      client.println();
+      client.println(postData);
+
+      // Wait for response from the server
+      while (client.connected()) {
+        while (client.available()) {
+          char c = client.read();
+          Serial.write(c);  // Display server response
+        }
+      }
+
+      // Close the connection
+      client.stop();
+      Serial.println("Data sent and connection closed");
+    } else {
+      Serial.println("Failed to connect to server");
+    }
+  } else {
+    Serial.println("WiFi not connected");
+  }
+}
+
 
 void display_loop() {
   while (1) {
@@ -348,6 +399,8 @@ void display_loop() {
     display.print(line1);
     display.display();
 
+    send_to_server(lightStatus, String(hoursWithLight), pumpStatus, humidity, temperature);
+
     if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
   }
 }
@@ -355,6 +408,19 @@ void display_loop() {
 
 void setup() {
   Serial.begin(9600);
+
+    while (!Serial) {
+    ; // Wait for the serial port to connect
+  }
+
+  // Attempt to connect to WiFi
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Connecting to SSID: ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, pass);
+    delay(3000);
+  }
+  Serial.println("Connected to WiFi");
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {  // Address 0x3D
 

@@ -1,15 +1,20 @@
+import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 engine = create_engine('sqlite:///data/greenhouse.db')
+API_KEY = os.getenv('API_KEY')
 
-
-@app.route('/api/sensor_data', methods=['GET'])
-def get_sensor_data():
+@app.route('/api_data', methods=['GET'])
+def sensor_data():
     """
     Retrieve sensor data based on the specified sensor type and date-time range.
 
@@ -50,6 +55,46 @@ def get_sensor_data():
         data = [{'timestamp': row[0], 'value': row[1]} for row in result]
 
     return jsonify(data)
+
+@app.route('/api/sensor_data', methods=['POST'])
+def add_sensor_data():
+    """
+    Add sensor data to the database. Requires an API key for authorization.
+
+    Input (JSON body):
+    - sensor_type (str): The type of sensor (e.g., 'temperature', 'humidity').
+    - timestamp (str): The date and time of the reading in 'YYYY-MM-DD HH:MM:SS' format.
+    - value (float): The sensor reading value.
+    - API key in the request headers.
+    """
+    # Check for API key
+    api_key = request.headers.get('API-Key')
+    if api_key != API_KEY:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # Get JSON data from the request
+    data = request.get_json()
+    sensor_type = data.get('sensor_type')
+    timestamp = data.get('timestamp')
+    value = data.get('value')
+
+    # Validate the input
+    if not sensor_type or not timestamp or value is None:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    # Insert the data into the database
+    with engine.connect() as connection:
+        query = text("""
+            INSERT INTO SensorReadings (sensor_type, timestamp, value)
+            VALUES (:sensor_type, :timestamp, :value)
+        """)
+        connection.execute(query, {
+            'sensor_type': sensor_type,
+            'timestamp': timestamp,
+            'value': value
+        })
+
+    return jsonify({'message': 'Data added successfully'}), 201
 
 if __name__ == '__main__':
     app.run(debug=True)
