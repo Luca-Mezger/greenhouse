@@ -12,6 +12,8 @@ using namespace std::literals::chrono_literals;
 
 BH1750 lightMeter;
 
+Semaphore bus_i2c(1);
+
 //temp & air humidity
 Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
@@ -187,8 +189,8 @@ void pump_loop() {
 // ------------------------------------------------
 
 
-float calculateBrightnessFromLux(float lux) {
-  float brightness = clip(lux, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+float calculateBrightnessFromLux(float lux_) {
+  float brightness = clip(lux_, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
   return ((brightness - MIN_BRIGHTNESS) / (MAX_BRIGHTNESS - MIN_BRIGHTNESS)) * 100;
 }
 
@@ -196,7 +198,9 @@ float calculateBrightnessFromLux(float lux) {
 void light_sensor_loop() {
   while (1) {
     // Read light level from BH1750 sensor
+    bus_i2c.acquire();
     float lux = lightMeter.readLightLevel();
+    bus_i2c.release();
     brightness = calculateBrightnessFromLux(lux);
 
     //Serial.println(lux);
@@ -227,16 +231,18 @@ void light_sensor_loop() {
       }
 
       // Determine if the LED needs to be turned on for additional light
+      bus_i2c.acquire();
       int remainingHours = 24 - rtc.hour;
+      bus_i2c.release();
       if (hoursWithLight < LIGHT_THRESHOLD_HOURS) {
         int requiredLightHours = LIGHT_THRESHOLD_HOURS - hoursWithLight;
         if (remainingHours <= requiredLightHours && brightness < THRESHOLD_PERCENTAGE) {
-          digitalWrite(LED_PIN, HIGH);  // Turn on the LED
+          digitalWrite(LED_PIN, LOW);  // Turn on the LED
         } else {
-          digitalWrite(LED_PIN, LOW);  // Turn off the LED
+          digitalWrite(LED_PIN, HIGH);  // Turn off the LED
         }
       } else {
-        digitalWrite(LED_PIN, LOW);  // Turn off the LED if sufficient light
+        digitalWrite(LED_PIN, HIGH);  // Turn off the LED if sufficient light
       }
     }
 
@@ -251,18 +257,19 @@ void light_sensor_loop() {
 // ------------------------------------------------
 void temperature_loop() {
   while (1) {
+    bus_i2c.acquire();
     temperature = htu.readTemperature();  //in Degree Celcius
     rel_hum = htu.readHumidity();
-    //Serial.println(temperature);
+    bus_i2c.release();
+    Serial.println(rel_hum);
 
     if (temperature > TEMPERATURE_THRESHOLD) {
       digitalWrite(FAN_PIN, LOW);  // Turn fan on
+    } 
+    else if (rel_hum > AIR_HUMIDITY_THRESHOLD) {
+      digitalWrite(FAN_PIN, LOW);  // Turn fan on
     } else if (temperature < TEMPERATURE_THRESHOLD - BUFFER) {
       digitalWrite(FAN_PIN, HIGH);  // Turn fan off
-    }
-
-    if (rel_hum > AIR_HUMIDITY_THRESHOLD) {
-      digitalWrite(FAN_PIN, LOW);  // Turn fan on
     } else if (rel_hum < AIR_HUMIDITY_THRESHOLD - BUFFER) {
       digitalWrite(FAN_PIN, HIGH);  // Turn fan off
     }
@@ -277,6 +284,7 @@ void temperature_loop() {
 
 void display_loop() {
   while (1) {
+    bus_i2c.acquire();
     if (lowWater) {
       display.setTextColor(BLACK, WHITE);
     } else {
@@ -349,6 +357,7 @@ void display_loop() {
     display.display();
 
     if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
+    bus_i2c.release();
   }
 }
 
