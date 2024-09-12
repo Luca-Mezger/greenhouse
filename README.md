@@ -242,7 +242,7 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
 
   if (--x_coord_display < min_x_coord_display) x_coord_display = display.width();
 ```
-##Webapp
+## Webapp
 We built a webapp that retrieves the data from the Arduino and stores them in a database. The user can view all metrics concering the greenhouse with a nice dashboard.
 #### Smart Greenhouse Dashboard
 
