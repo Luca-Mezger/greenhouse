@@ -4,6 +4,8 @@ Advised by Alberto Ferrante - USI Departement CS
    
 The goal for this project week was to make a fully functioning automated greenhouse, where all funtions that would need manual work, would be able to be done by the greenhouse.
 
+![greenhouse](picture.jpg)
+
 ## Hardware
 - 1x Arduino Nano 33 Sense BLE
 - 1x Capacitive Soil Moisture Sensor v1.2
@@ -16,6 +18,8 @@ The goal for this project week was to make a fully functioning automated greenho
 - 1x 5V PSU
 - 1x Laptop or other device to run server backend for the webapp
 
+<img src="schematic.png" alt="schematic" width="80%"/>
+
 ## Todo
 - [x] Light detection
 - [x] Automatic Watering
@@ -27,11 +31,11 @@ The goal for this project week was to make a fully functioning automated greenho
 - [x] Air Humidity
 - [x] Build Greenhouse
 - [x] Display
-- [ ] WebApp
-- [ ] Poster (Fritzing)
+- [x] WebApp
+- [x] Poster (Fritzing)
 - [ ] Report
 
-
+<img src="graphic.png" alt="graphic" width="100%"/>
 
 ## Work journal
 
