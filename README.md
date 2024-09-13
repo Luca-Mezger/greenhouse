@@ -2,7 +2,7 @@
 Schweizer Jugend Forscht - Coding Camp   
 Advised by Alberto Ferrante - USI Departement CS   
    
-The goal for this project week was to make a fully functioning automated greenhouse, where all funtions that would need manual work, would be able to be done by the greenhouse.
+The goal for this project week was to make a fully functioning automated greenhouse, where all funtions that would need manual work, would be able to be done by the greenhouse. The main code is in /multithreading.
 
 ![greenhouse](picture.jpg)
 
