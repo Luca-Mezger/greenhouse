@@ -35,7 +35,7 @@ The goal for this project week was to make a fully functioning automated greenho
 - [x] Poster (Fritzing)
 - [ ] Report
 
-<img src="graphic.png" alt="graphic" width="100%"/>
+<img src="graphic.png" alt="graphic" width="80%%"/>
 
 ## Work journal
 
@@ -248,6 +248,8 @@ With a voltage regulator, we can convert an input voltage of 3.3 V into 12 V. We
 ```
 ## Webapp
 We built a webapp that retrieves the data from the Arduino and stores them in a database. The user can view all metrics concering the greenhouse with a nice dashboard.
+<img src="server.png" alt="server" width="80%"/>
+
 #### Smart Greenhouse Dashboard
 
 A web app for monitoring and controlling greenhouse conditions.
