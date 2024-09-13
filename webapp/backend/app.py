@@ -90,12 +90,12 @@ def add_sensor_data():
     # Get form data from the request
     light_status = request.form.get('light_status')
     hours_of_light = request.form.get('hours_of_light')
-    pump_status = request.form.get('pump_status')
+    air_humidity = request.form.get('air_humidity')
     humidity = request.form.get('humidity')
     temperature = request.form.get('temperature')
 
     # Validate the input data
-    if not light_status or not hours_of_light or not pump_status or not humidity or not temperature:
+    if not light_status or not hours_of_light or not air_humidity or not humidity or not temperature:
         return jsonify({'error': 'Missing required fields'}), 400
 
     try:
@@ -120,12 +120,12 @@ def add_sensor_data():
 
             connection.execute(text("""
                 INSERT INTO SensorReadings (sensor_type, value)
-                VALUES ('pump_status', :pump_status)
-            """), {'pump_status': pump_status})
+                VALUES ('air_humidity', :air_humidity)
+            """), {'air_humidity': air_humidity})
 
             connection.execute(text("""
                 INSERT INTO SensorReadings (sensor_type, value)
-                VALUES ('humidity', :humidity)
+                VALUES ('soil_humidity', :humidity)
             """), {'humidity': humidity})
 
             connection.execute(text("""

@@ -16,7 +16,8 @@ char server[] = "192.168.90.62";
 
 WiFiClient client;
 String apiKey = "bruh_bruh_greenhouse"; // Define your API key here
-
+#define WIFI_PORT 5000
+#define WIFI_DELAY 5000 //delay between sends to database in ms 1800000 = 30min
 
 BH1750 lightMeter;
 
@@ -374,18 +375,18 @@ void display_loop() {
 // WiFi
 // ------------------------------------------------
 
-void send_to_server(String lightStatus, String hoursOfLight, String pumpStatus, String humidity, String temperature, String apiKey) {
+void send_to_server(String lightStatus, String hoursOfLight, String air_humidity, String humidity, String temperature, String apiKey) {
   // If connected to WiFi
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Sending data to server...");
 
     // Start connection to server
-    if (client.connect(server, 80)) {
+    if (client.connect(server, WIFI_PORT)) {
       Serial.println("Connected to server");
 
       // Construct the POST data
       String postData = "light_status=" + lightStatus + "&hours_of_light=" + hoursOfLight + 
-                        "&pump_status=" + pumpStatus + "&humidity=" + humidity + "&temperature=" + temperature;
+                        "&air_humidity=" + air_humidity + "&humidity=" + humidity + "&temperature=" + temperature;
 
       // Send HTTP request
       client.println("POST /api/sensor_data HTTP/1.1");
@@ -414,14 +415,22 @@ void send_to_server(String lightStatus, String hoursOfLight, String pumpStatus, 
     }
   } else {
     Serial.println("WiFi not connected");
+    // Attempt to connect to WiFi
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Connecting to SSID: ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, pass);
+    delay(3000);
+  }
+  Serial.println("Connected to WiFi");
   }
 }
 void wifi_loop() {
   while (1) {
 
-    send_to_server(String(brightness), String(hoursWithLight), "pumpStatus", String(averageSoilHumidity), String(temperature), apiKey);  // Sending data to server
-    ThisThread::sleep_for(1800000);
-
+    send_to_server(String(brightness), String(hoursWithLight), String(rel_hum), String(averageSoilHumidity), String(temperature), apiKey);  // Sending data to server
+    ThisThread::sleep_for(WIFI_DELAY);
+    //ThisThread::sleep_for(5000);
   }
 }
 
@@ -456,6 +465,9 @@ void setup() {
   // for light sensor
   Wire.begin();
   lightMeter.begin();
+  rtc.setup();
+
+  rtc.adjustRtc(F(__DATE__), F(__TIME__));
 
   // Initialize fan pin
   pinMode(FAN_PIN, OUTPUT);
